@@ -1274,6 +1274,8 @@ def motion(event):
     canvas_1.coords(obj[14].ball,x_m-obj[14].r,y_m-obj[14].r,x_m+obj[14].r,y_m+obj[14].r)
 canvas_1.bind('<Motion>', motion)
 
+#Testkommentar för githubcommit
+
 ## ATT GÖRA:
 # Varför funkar den nya impulsekvationen i L2FL och inte den gamla?
 # Ha kraftpilar osv som ett separat objekt. Som Trace
