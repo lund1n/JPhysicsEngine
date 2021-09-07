@@ -275,11 +275,12 @@ def Contact_dyn_statline(o1,o2,coocol,unitvec_n,unitvec_t):
     viz.append( canvas_1.create_oval(coocol[0]-4,coocol[1]-4,coocol[0]+4,coocol[1]+4,outline="red") )
     # Draw normal force arrow
     #viz.append( canvas_1.create_line(coocol[0],coocol[1],coocol[0]+unitvec_n[0]*viz_sf,coocol[1]+unitvec_n[1]*viz_sf,arrow=LAST,fill="red") )
-    viz.append( canvas_1.create_line(coocol[0],coocol[1],coocol[0]+unitvec_n[0]*abs(F_n)/viz_sf2,coocol[1]+unitvec_n[1]*abs(F_n)/viz_sf2,arrow=LAST,fill="red") )
+    #viz.append( canvas_1.create_line(coocol[0],coocol[1],coocol[0]+unitvec_n[0]*abs(F_n)/viz_sf2,coocol[1]+unitvec_n[1]*abs(F_n)/viz_sf2,arrow=LAST,fill="red") )
+    viz.append( canvas_1.create_line(coocol[0],coocol[1],coocol[0]+unitvec_n[0]*300*tanh(abs(F_n)/100000000),coocol[1]+unitvec_n[1]*300*tanh(abs(F_n)/100000000),arrow=LAST,fill="red") )
     # Draw normal force arrow
     #viz.append( canvas_1.create_line(coocol[0],coocol[1],coocol[0]+F_t_unitvec[0]*viz_sf,coocol[1]+F_t_unitvec[1]*viz_sf,arrow=LAST,fill="red") )
-    viz.append( canvas_1.create_line(coocol[0],coocol[1],coocol[0]+F_t_unitvec[0]*abs(F_t)/viz_sf2,coocol[1]+F_t_unitvec[1]*abs(F_t)/viz_sf2,arrow=LAST,fill="red") )
-
+    #viz.append( canvas_1.create_line(coocol[0],coocol[1],coocol[0]+F_t_unitvec[0]*abs(F_t)/viz_sf2,coocol[1]+F_t_unitvec[1]*abs(F_t)/viz_sf2,arrow=LAST,fill="red") )
+    viz.append( canvas_1.create_line(coocol[0],coocol[1],coocol[0]+F_t_unitvec[0]*300*tanh(abs(F_t)/100000000),coocol[1]+F_t_unitvec[1]*300*tanh(abs(F_t)/100000000),arrow=LAST,fill="red") )
 
 def Contact_dyn_line(o1,o2,coocol,unitvec_n,unitvec_t):
     
@@ -327,9 +328,12 @@ def Contact_dyn_line(o1,o2,coocol,unitvec_n,unitvec_t):
     # Draw contact point
     viz.append( canvas_1.create_oval(coocol[0]-4,coocol[1]-4,coocol[0]+4,coocol[1]+4,outline="green") )
     # Draw force arrows
-    viz.append( canvas_1.create_line(coocol[0]-unitvec_n[0]*viz_sf,coocol[1]-unitvec_n[1]*viz_sf,coocol[0]+unitvec_n[0]*viz_sf,coocol[1]+unitvec_n[1]*viz_sf,arrow=BOTH,fill="green") )
+    #viz.append( canvas_1.create_line(coocol[0]-unitvec_n[0]*viz_sf,coocol[1]-unitvec_n[1]*viz_sf,coocol[0]+unitvec_n[0]*viz_sf,coocol[1]+unitvec_n[1]*viz_sf,arrow=BOTH,fill="green") )
+    viz.append( canvas_1.create_line(coocol[0],coocol[1],coocol[0]+unitvec_n[0]*300*tanh(abs(F_n)/100000000),coocol[1]+unitvec_n[1]*300*tanh(abs(F_n)/100000000),arrow=LAST,fill="red") )
     # Draw tang vel arrows
-    viz.append( canvas_1.create_line(coocol[0]-unitvec_t[0]*30,coocol[1]-unitvec_t[1]*30,coocol[0]+unitvec_t[0]*30,coocol[1]+unitvec_t[1]*30,arrow=BOTH,fill="green") )
+    #viz.append( canvas_1.create_line(coocol[0]-unitvec_t[0]*30,coocol[1]-unitvec_t[1]*30,coocol[0]+unitvec_t[0]*30,coocol[1]+unitvec_t[1]*30,arrow=BOTH,fill="green") )
+    viz.append( canvas_1.create_line(coocol[0],coocol[1],coocol[0]+unitvec_t[0]*300*tanh(abs(F_t)/100000000),coocol[1]+unitvec_t[1]*300*tanh(abs(F_t)/100000000),arrow=LAST,fill="red") )
+
 
 def Collision_Ball_Ball(b1,b2):
     dist_b1b2 = sqrt( (b2.coo1[0]-b1.coo1[0])**2 + (b2.coo1[1]-b1.coo1[1])**2 ) # distance between points
@@ -658,7 +662,7 @@ class Constraint_SpringDamper:
 
         # Draw
         canvas_1.coords(self.line,self.A.coo1[0],self.A.coo1[1],self.B.coo1[0],self.B.coo1[1])
-        canvas_1.itemconfigure(self.line,fill="black",width=1)
+        canvas_1.itemconfigure(self.line,fill="black",width=2)
         if self.eps > 0.15:
             canvas_1.itemconfigure(self.line,fill="red")
         else:
@@ -697,7 +701,7 @@ class Constraint_Distance:
         
         # Draw
         canvas_1.coords(self.line,self.A.coo1[0],self.A.coo1[1],self.B.coo1[0],self.B.coo1[1])
-        canvas_1.itemconfigure(self.line,fill="black",width=1)
+        canvas_1.itemconfigure(self.line,fill="black",width=2)
         if self.eps > 0.15:
             canvas_1.itemconfigure(self.line,fill="red")
         else:
@@ -793,7 +797,7 @@ class Object_Ball:
         self.canvas.coords(self.text_F,self.coo1[0]+Safediv(self.F_other[0],self.F_other_abs)*viz_sf,self.coo1[1]+Safediv(self.F_other[1],self.F_other_abs)*viz_sf)
 
         self.canvas.itemconfigure(self.text_F,text=str(round(self.F_other_abs/10000)))
-        self.canvas.coords(self.arrow_g,self.coo1[0],self.coo1[1],self.coo1[0],self.coo1[1]+self.m*grav/viz_sf2)
+        self.canvas.coords(self.arrow_g,self.coo1[0],self.coo1[1],self.coo1[0],self.coo1[1]+300*tanh(abs(self.m*grav)/100000000))
 
         #self.canvas.coords(self.text_coo,self.coo0[0],self.coo0[1]+self.offset_text_coo)
         #self.canvas.itemconfigure(self.text_coo,text="("+str(round(self.coo0[0]))+", "+str(round(self.coo0[1]))+")")
