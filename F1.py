@@ -39,6 +39,8 @@ obj = []
 con = []
 viz_sf = 40
 viz_sf2 = 1000000
+sf_farrow1 = 200
+sf_farrow2 = 100000000
 viz = []
 
 #colcounter = 0
@@ -236,12 +238,15 @@ def Contact_line_line(o1,o2,coocol,unitvec_n,unitvec_t):
     o1.F_other =  subtract( o1.F_other , multiply([unitvec_t[0],unitvec_t[1]],F_t) )
     o2.F_other =  add( o2.F_other , multiply([unitvec_t[0],unitvec_t[1]],F_t) )
 
+
     # Draw contact point
-    viz.append( canvas_1.create_oval(coocol[0]-4,coocol[1]-4,coocol[0]+4,coocol[1]+4,outline="green") )
+    viz.append( canvas_1.create_oval(coocol[0]-4,coocol[1]-4,coocol[0]+4,coocol[1]+4,fill="red",outline="red") )
     # Draw force arrows
-    viz.append( canvas_1.create_line(coocol[0]-unitvec_n[0]*viz_sf,coocol[1]-unitvec_n[1]*viz_sf,coocol[0]+unitvec_n[0]*viz_sf,coocol[1]+unitvec_n[1]*viz_sf,arrow=BOTH,fill="green") )
+    #viz.append( canvas_1.create_line(coocol[0]-unitvec_n[0]*viz_sf,coocol[1]-unitvec_n[1]*viz_sf,coocol[0]+unitvec_n[0]*viz_sf,coocol[1]+unitvec_n[1]*viz_sf,arrow=BOTH,fill="green") )
+    viz.append( canvas_1.create_line(coocol[0]-unitvec_n[0]*sf_farrow1*tanh(abs(F_n)/sf_farrow2),coocol[1]-unitvec_n[1]*sf_farrow1*tanh(abs(F_n)/sf_farrow2),coocol[0]+unitvec_n[0]*sf_farrow1*tanh(abs(F_n)/sf_farrow2),coocol[1]+unitvec_n[1]*sf_farrow1*tanh(abs(F_n)/sf_farrow2),arrow=BOTH,fill="red") )
     # Draw tang vel arrows
-    viz.append( canvas_1.create_line(coocol[0]-unitvec_t[0]*30,coocol[1]-unitvec_t[1]*30,coocol[0]+unitvec_t[0]*30,coocol[1]+unitvec_t[1]*30,arrow=BOTH,fill="green") )
+    #viz.append( canvas_1.create_line(coocol[0]-unitvec_t[0]*30,coocol[1]-unitvec_t[1]*30,coocol[0]+unitvec_t[0]*30,coocol[1]+unitvec_t[1]*30,arrow=BOTH,fill="green") )
+    viz.append( canvas_1.create_line(coocol[0]-unitvec_t[0]*sf_farrow1*tanh(abs(F_t)/sf_farrow2),coocol[1]-unitvec_t[1]*sf_farrow1*tanh(abs(F_t)/sf_farrow2),coocol[0]+unitvec_t[0]*sf_farrow1*tanh(abs(F_t)/sf_farrow2),coocol[1]+unitvec_t[1]*sf_farrow1*tanh(abs(F_t)/sf_farrow2),arrow=BOTH,fill="red") )
 
 def Contact_dyn_statline(o1,o2,coocol,unitvec_n,unitvec_t):
     rcol_o1 = [coocol[0]-o1.coo1[0],coocol[1]-o1.coo1[1],0]
@@ -272,15 +277,15 @@ def Contact_dyn_statline(o1,o2,coocol,unitvec_n,unitvec_t):
     o1.tau_other =  subtract( o1.tau_other , tauo1_t[2] )
     
     # Draw contact point
-    viz.append( canvas_1.create_oval(coocol[0]-4,coocol[1]-4,coocol[0]+4,coocol[1]+4,outline="red") )
+    viz.append( canvas_1.create_oval(coocol[0]-4,coocol[1]-4,coocol[0]+4,coocol[1]+4,fill="red",outline="red") )
     # Draw normal force arrow
     #viz.append( canvas_1.create_line(coocol[0],coocol[1],coocol[0]+unitvec_n[0]*viz_sf,coocol[1]+unitvec_n[1]*viz_sf,arrow=LAST,fill="red") )
     #viz.append( canvas_1.create_line(coocol[0],coocol[1],coocol[0]+unitvec_n[0]*abs(F_n)/viz_sf2,coocol[1]+unitvec_n[1]*abs(F_n)/viz_sf2,arrow=LAST,fill="red") )
-    viz.append( canvas_1.create_line(coocol[0],coocol[1],coocol[0]+unitvec_n[0]*300*tanh(abs(F_n)/100000000),coocol[1]+unitvec_n[1]*300*tanh(abs(F_n)/100000000),arrow=LAST,fill="red") )
+    viz.append( canvas_1.create_line(coocol[0],coocol[1],coocol[0]+unitvec_n[0]*sf_farrow1*tanh(abs(F_n)/sf_farrow2),coocol[1]+unitvec_n[1]*sf_farrow1*tanh(abs(F_n)/sf_farrow2),arrow=LAST,fill="red") )
     # Draw normal force arrow
     #viz.append( canvas_1.create_line(coocol[0],coocol[1],coocol[0]+F_t_unitvec[0]*viz_sf,coocol[1]+F_t_unitvec[1]*viz_sf,arrow=LAST,fill="red") )
     #viz.append( canvas_1.create_line(coocol[0],coocol[1],coocol[0]+F_t_unitvec[0]*abs(F_t)/viz_sf2,coocol[1]+F_t_unitvec[1]*abs(F_t)/viz_sf2,arrow=LAST,fill="red") )
-    viz.append( canvas_1.create_line(coocol[0],coocol[1],coocol[0]+F_t_unitvec[0]*300*tanh(abs(F_t)/100000000),coocol[1]+F_t_unitvec[1]*300*tanh(abs(F_t)/100000000),arrow=LAST,fill="red") )
+    viz.append( canvas_1.create_line(coocol[0],coocol[1],coocol[0]+F_t_unitvec[0]*sf_farrow1*tanh(abs(F_t)/sf_farrow2),coocol[1]+F_t_unitvec[1]*sf_farrow1*tanh(abs(F_t)/sf_farrow2),arrow=LAST,fill="red") )
 
 def Contact_dyn_line(o1,o2,coocol,unitvec_n,unitvec_t):
     
@@ -326,14 +331,13 @@ def Contact_dyn_line(o1,o2,coocol,unitvec_n,unitvec_t):
     o2.F_other =  add( o2.F_other , multiply([unitvec_t[0],unitvec_t[1]],F_t) )
     
     # Draw contact point
-    viz.append( canvas_1.create_oval(coocol[0]-4,coocol[1]-4,coocol[0]+4,coocol[1]+4,outline="green") )
+    viz.append( canvas_1.create_oval(coocol[0]-4,coocol[1]-4,coocol[0]+4,coocol[1]+4,fill="red",outline="red") )
     # Draw force arrows
     #viz.append( canvas_1.create_line(coocol[0]-unitvec_n[0]*viz_sf,coocol[1]-unitvec_n[1]*viz_sf,coocol[0]+unitvec_n[0]*viz_sf,coocol[1]+unitvec_n[1]*viz_sf,arrow=BOTH,fill="green") )
-    viz.append( canvas_1.create_line(coocol[0],coocol[1],coocol[0]+unitvec_n[0]*300*tanh(abs(F_n)/100000000),coocol[1]+unitvec_n[1]*300*tanh(abs(F_n)/100000000),arrow=LAST,fill="red") )
+    viz.append( canvas_1.create_line(coocol[0]-unitvec_n[0]*sf_farrow1*tanh(abs(F_n)/sf_farrow2),coocol[1]-unitvec_n[1]*sf_farrow1*tanh(abs(F_n)/sf_farrow2),coocol[0]+unitvec_n[0]*sf_farrow1*tanh(abs(F_n)/sf_farrow2),coocol[1]+unitvec_n[1]*sf_farrow1*tanh(abs(F_n)/sf_farrow2),arrow=BOTH,fill="red") )
     # Draw tang vel arrows
     #viz.append( canvas_1.create_line(coocol[0]-unitvec_t[0]*30,coocol[1]-unitvec_t[1]*30,coocol[0]+unitvec_t[0]*30,coocol[1]+unitvec_t[1]*30,arrow=BOTH,fill="green") )
-    viz.append( canvas_1.create_line(coocol[0],coocol[1],coocol[0]+unitvec_t[0]*300*tanh(abs(F_t)/100000000),coocol[1]+unitvec_t[1]*300*tanh(abs(F_t)/100000000),arrow=LAST,fill="red") )
-
+    viz.append( canvas_1.create_line(coocol[0]-unitvec_t[0]*sf_farrow1*tanh(abs(F_t)/sf_farrow2),coocol[1]-unitvec_t[1]*sf_farrow1*tanh(abs(F_t)/sf_farrow2),coocol[0]+unitvec_t[0]*sf_farrow1*tanh(abs(F_t)/sf_farrow2),coocol[1]+unitvec_t[1]*sf_farrow1*tanh(abs(F_t)/sf_farrow2),arrow=BOTH,fill="red") )
 
 def Collision_Ball_Ball(b1,b2):
     dist_b1b2 = sqrt( (b2.coo1[0]-b1.coo1[0])**2 + (b2.coo1[1]-b1.coo1[1])**2 ) # distance between points
@@ -382,11 +386,14 @@ def Collision_Ball_Ball(b1,b2):
         b2.F_other =  add( b2.F_other , multiply([unitvec_t[0],unitvec_t[1]],F_t) )
     
         # Draw contact point
-        viz.append( canvas_1.create_oval(coocol[0]-4,coocol[1]-4,coocol[0]+4,coocol[1]+4,outline="green") )
+        viz.append( canvas_1.create_oval(coocol[0]-4,coocol[1]-4,coocol[0]+4,coocol[1]+4,fill="red",outline="red") )
         # Draw force arrows
-        viz.append( canvas_1.create_line(coocol[0]-unitvec_n[0]*viz_sf,coocol[1]-unitvec_n[1]*viz_sf,coocol[0]+unitvec_n[0]*viz_sf,coocol[1]+unitvec_n[1]*viz_sf,arrow=BOTH,fill="green") )
+        #viz.append( canvas_1.create_line(coocol[0]-unitvec_n[0]*viz_sf,coocol[1]-unitvec_n[1]*viz_sf,coocol[0]+unitvec_n[0]*viz_sf,coocol[1]+unitvec_n[1]*viz_sf,arrow=BOTH,fill="green") )
+        viz.append( canvas_1.create_line(coocol[0]-unitvec_n[0]*sf_farrow1*tanh(abs(F_n)/sf_farrow2),coocol[1]-unitvec_n[1]*sf_farrow1*tanh(abs(F_n)/sf_farrow2),coocol[0]+unitvec_n[0]*sf_farrow1*tanh(abs(F_n)/sf_farrow2),coocol[1]+unitvec_n[1]*sf_farrow1*tanh(abs(F_n)/sf_farrow2),arrow=BOTH,fill="red") )
         # Draw tang vel arrows
-        viz.append( canvas_1.create_line(coocol[0]-unitvec_t[0]*30,coocol[1]-unitvec_t[1]*30,coocol[0]+unitvec_t[0]*30,coocol[1]+unitvec_t[1]*30,arrow=BOTH,fill="green") )
+        #viz.append( canvas_1.create_line(coocol[0]-unitvec_t[0]*30,coocol[1]-unitvec_t[1]*30,coocol[0]+unitvec_t[0]*30,coocol[1]+unitvec_t[1]*30,arrow=BOTH,fill="green") )
+        viz.append( canvas_1.create_line(coocol[0]-unitvec_t[0]*sf_farrow1*tanh(abs(F_t)/sf_farrow2),coocol[1]-unitvec_t[1]*sf_farrow1*tanh(abs(F_t)/sf_farrow2),coocol[0]+unitvec_t[0]*sf_farrow1*tanh(abs(F_t)/sf_farrow2),coocol[1]+unitvec_t[1]*sf_farrow1*tanh(abs(F_t)/sf_farrow2),arrow=BOTH,fill="red") )
+
 
         # Move balls apart, without adding velocity
         pendist = (dist_b1b2-(b1.r+b2.r))
@@ -735,7 +742,7 @@ class Object_Ball:
         self.coo1 = array([x, y])
         self.coo0 = self.coo1
         self.coom1 = self.coo1
-        self.theta1 = 0.1
+        self.theta1 = 0.0
         self.theta0 = 0.0
         self.thetam1 = 0.0
         self.d = d
@@ -764,8 +771,8 @@ class Object_Ball:
         self.canvas = canvas
         self.ball = canvas.create_oval(x-self.r,y-self.r,x+self.r,y+self.r,fill="white")
         self.thetaline = canvas.create_line(self.coo1[0],self.coo1[1],self.coothetaline[0],self.coothetaline[1])
-        self.arrow_F = canvas.create_line(self.coo1[0],self.coo1[1],self.F_other[0],self.F_other[1],arrow=LAST,fill="grey")
-        self.text_F = canvas_1.create_text(self.coo0[0],self.coo0[1],text=str(self.F_other_abs),font=("arial",8),fill="grey")
+        #self.arrow_F = canvas.create_line(self.coo1[0],self.coo1[1],self.F_other[0],self.F_other[1],arrow=LAST,fill="grey")
+        #self.text_F = canvas_1.create_text(self.coo0[0],self.coo0[1],text=str(self.F_other_abs),font=("arial",8),fill="grey")
         self.arrow_g = canvas.create_line(self.coo1[0],self.coo1[1],self.coo1[0],self.coo1[1]+self.m*grav/viz_sf2,arrow=LAST,fill="red")
         #self.offset_text_coo = -20
         #self.text_coo = canvas_1.create_text(self.coo0[0],self.coo0[1]+self.offset_text_coo,text="("+str(round(self.coo0[0]))+", "+str(round(self.coo0[1]))+")",font=("arial",8))
@@ -793,11 +800,11 @@ class Object_Ball:
         self.canvas.coords(self.ball,self.coo1[0]-self.r,self.coo1[1]-self.r,self.coo1[0]+self.r,self.coo1[1]+self.r)
         self.canvas.coords(self.thetaline,self.coo1[0],self.coo1[1],self.coothetaline[0],self.coothetaline[1])
 
-        self.canvas.coords(self.arrow_F,self.coo1[0],self.coo1[1],self.coo1[0]+Safediv(self.F_other[0],self.F_other_abs)*viz_sf,self.coo1[1]+Safediv(self.F_other[1],self.F_other_abs)*viz_sf)
-        self.canvas.coords(self.text_F,self.coo1[0]+Safediv(self.F_other[0],self.F_other_abs)*viz_sf,self.coo1[1]+Safediv(self.F_other[1],self.F_other_abs)*viz_sf)
+        #self.canvas.coords(self.arrow_F,self.coo1[0],self.coo1[1],self.coo1[0]+Safediv(self.F_other[0],self.F_other_abs)*viz_sf,self.coo1[1]+Safediv(self.F_other[1],self.F_other_abs)*viz_sf)
+        #self.canvas.coords(self.text_F,self.coo1[0]+Safediv(self.F_other[0],self.F_other_abs)*viz_sf,self.coo1[1]+Safediv(self.F_other[1],self.F_other_abs)*viz_sf)
 
-        self.canvas.itemconfigure(self.text_F,text=str(round(self.F_other_abs/10000)))
-        self.canvas.coords(self.arrow_g,self.coo1[0],self.coo1[1],self.coo1[0],self.coo1[1]+300*tanh(abs(self.m*grav)/100000000))
+        #self.canvas.itemconfigure(self.text_F,text=str(round(self.F_other_abs/10000)))
+        self.canvas.coords(self.arrow_g,self.coo1[0],self.coo1[1],self.coo1[0],self.coo1[1]+sf_farrow1*tanh(abs(self.m*grav)/100000000))
 
         #self.canvas.coords(self.text_coo,self.coo0[0],self.coo0[1]+self.offset_text_coo)
         #self.canvas.itemconfigure(self.text_coo,text="("+str(round(self.coo0[0]))+", "+str(round(self.coo0[1]))+")")
@@ -1043,7 +1050,7 @@ class Object_Line:
         self.lineAB = canvas.create_line(self.cooA[0],self.cooA[1],self.cooB[0],self.cooB[1],width=h,fill="grey")
         self.ballA = canvas.create_oval(self.cooA[0]-self.hhalf,self.cooA[1]-self.hhalf,self.cooA[0]+self.hhalf,self.cooA[1]+self.hhalf,outline="grey",fill="grey")
         self.ballB = canvas.create_oval(self.cooB[0]-self.hhalf,self.cooB[1]-self.hhalf,self.cooB[0]+self.hhalf,self.cooB[1]+self.hhalf,outline="grey",fill="grey")
-
+        self.arrow_g = canvas.create_line(self.coo1[0],self.coo1[1],self.coo1[0],self.coo1[1]+self.m*grav/viz_sf2,arrow=LAST,fill="red")
         #self.lineN = canvas.create_line(self.coomidp[0],self.coomidp[1],self.normalvec[0],self.normalvec[1],arrow=LAST)
         #self.linecol = canvas.create_line( 0,0,1,0, dash = (2,2) )
 
@@ -1072,6 +1079,7 @@ class Object_Line:
         self.canvas.coords(self.ballA,self.cooA[0]-self.hhalf,self.cooA[1]-self.hhalf,self.cooA[0]+self.hhalf,self.cooA[1]+self.hhalf)
         self.canvas.coords(self.ballB,self.cooB[0]-self.hhalf,self.cooB[1]-self.hhalf,self.cooB[0]+self.hhalf,self.cooB[1]+self.hhalf)
 
+        self.canvas.coords(self.arrow_g,self.coo1[0],self.coo1[1],self.coo1[0],self.coo1[1]+sf_farrow1*tanh(abs(self.m*grav)/100000000))
 
         #print(self.theta1*180/pi)
         #print(abs(cos(self.theta1)))
@@ -1100,20 +1108,20 @@ class Object_ShowPhysics:
     def __init__(self,canvas,target):
         self.canvas = canvas
         self.target = target
-        self.F = target.F_other
+        #self.F = target.F_other
         self.coo0 = target.coo0
         self.coo1 = target.coo1
         self.vel = subtract(self.coo1,self.coo0)
         self.l_arrow = 40
         self.offset_arrow = 30
         self.absvel = sqrt( (self.vel[0])**2 + (self.vel[1])**2 )
-        self.absF = sqrt( (self.F[0])**2 + (self.F[1])**2 )
+        #self.absF = sqrt( (self.F[0])**2 + (self.F[1])**2 )
         self.velarrow = multiply( self.l_arrow , Safediv(self.vel,self.absvel) )
-        self.Farrow = multiply( self.l_arrow , Safediv(self.F,self.absF) )
+        #self.Farrow = multiply( self.l_arrow , Safediv(self.F,self.absF) )
         self.offset = 65
         self.velarrow2 = canvas.create_line(self.coo1[0],self.coo1[1]-self.offset,self.coo1[0]+self.velarrow[0],self.coo1[1]+self.offset+self.velarrow[1],arrow=LAST,fill="purple")
         self.text_vel = canvas_1.create_text(0,0,text="",font=("arial",8),fill="purple")
-        self.Farrow2 = canvas.create_line(self.coo1[0],self.coo1[1]-self.offset,self.coo1[0]+self.Farrow[0],self.coo1[1]+self.offset+self.Farrow[1],arrow=LAST,fill="grey")
+        #self.Farrow2 = canvas.create_line(self.coo1[0],self.coo1[1]-self.offset,self.coo1[0]+self.Farrow[0],self.coo1[1]+self.offset+self.Farrow[1],arrow=LAST,fill="grey")
 
 
     def integrate(self):
@@ -1122,7 +1130,7 @@ class Object_ShowPhysics:
         self.theta0 = self.target.theta0
         self.theta1 = self.target.theta1
         self.vel = subtract(self.coo1,self.coo0)/dt
-        self.F = self.target.F_other
+        #self.F = self.target.F_other
         self.omega = subtract(self.theta1,self.theta0)/dt
         self.absvel = sqrt( (self.vel[0])**2 + (self.vel[1])**2 )
         self.velarrow = multiply( self.l_arrow , Safediv(self.vel,self.absvel) )
@@ -1130,7 +1138,7 @@ class Object_ShowPhysics:
         self.Ekrot = 0.5*self.target.I*self.omega**2
         canvas_1.coords(self.velarrow2,self.coo1[0]-self.velarrow[0]/2,self.coo1[1]-self.offset_arrow-self.velarrow[1]/2,self.coo1[0]+self.velarrow[0]/2,self.coo1[1]-self.offset_arrow+self.velarrow[1]/2)
         #canvas_1.coords(self.Farrow2,self.coo1[0],self.coo1[1]-self.offset_arrow,self.coo1[0]+self.Farrow[0],self.coo1[1]-self.offset_arrow+self.Farrow[1])
-        canvas_1.coords(self.Farrow2,self.coo1[0],self.coo1[1]-self.offset_arrow,self.coo1[0]+self.F[0],self.coo1[1]-self.offset_arrow+self.F[1])
+        #canvas_1.coords(self.Farrow2,self.coo1[0],self.coo1[1]-self.offset_arrow,self.coo1[0]+self.F[0],self.coo1[1]-self.offset_arrow+self.F[1])
         
         canvas_1.itemconfigure(self.text_vel,text="x, y = "+str(round(self.coo0[0]))+", "+str(round(self.coo0[1]))+"\nvel = "+str(round(self.absvel,3))+"\nomega = "+str(round(self.omega,3))+"\nvel_t = "+str(round(self.omega*self.target.r,3))+"\nE_k = "+str(round(self.Ektrans+self.Ekrot)))
         canvas_1.coords(self.text_vel,self.coo1[0]+self.offset,self.coo1[1]-self.offset)
@@ -1243,7 +1251,7 @@ con.append(Constraint_Distance(obj[21],obj[22],50))
 #obj.append(Object_ShowDistance_Point_LineSegment(obj[4],obj[10]))
 #obj.append(Object_ShowDistance_Point_LineSegment(obj[4],obj[11]))
 
-obj.append(Object_Line(canvas_1,260,150,380,140,10,40,rho_rubber,0.25,0.02)) #270,150 | 390,70
+obj.append(Object_Line(canvas_1,260,150,380,140,10,40,rho_rubber,0.25,0.2)) #270,150 | 390,70
 
 obj.append(Object_ShowDistance_Point_LineSegment(obj[15],"coo1",obj[10]))
 obj.append(Object_ShowDistance_Point_LineSegment(obj[15],"coo1",obj[11]))
@@ -1257,7 +1265,7 @@ obj.append(Object_Ball(canvas_1,300,50,10,rho_steel,0.6,0.6)) #big ball 2
 obj.append(Object_ShowPhysics(canvas_1,obj[28]))
 obj.append(Object_ShowPhysics(canvas_1,obj[29]))
 
-obj.append(Object_FixedLine(canvas_1,320,210,145,230,5,0.5,0.6))
+obj.append(Object_FixedLine(canvas_1,320,210,205,230,5,0.5,0.6))
 
 #obj.append(Object_FixedLine(canvas_1,400,180,145,180,0.5,0.6))
 
@@ -1265,7 +1273,7 @@ obj.append(Object_ShowDistance_Point_LineSegment(obj[23],"cooA",obj[12]))
 obj.append(Object_ShowDistance_Point_LineSegment(obj[23],"cooB",obj[12]))
 obj.append(Object_ShowPhysics(canvas_1,obj[23]))
 
-obj.append(Object_Line(canvas_1,340,125,410,115,15,40,rho_rubber,0.25,0.02)) #270,150 | 390,70
+obj.append(Object_Line(canvas_1,340,125,410,115,15,40,rho_rubber,0.5,0.5)) #270,150 | 390,70
 
 
 x_m = 0
