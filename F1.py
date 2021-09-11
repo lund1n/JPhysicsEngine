@@ -3,7 +3,6 @@ from tkinter import *
 from numpy import *
 import time
 
-
 w_cnv = 750
 h_cnv = 750
 
@@ -47,8 +46,8 @@ viz = []
 t_elapsed = 0
 dt = 0.025
 
-dtr = canvas_1.create_text(10,20,text="dt = "+str(dt),font="arial",anchor=SW)
-t_elapsedr = canvas_1.create_text(10,35,text="t = "+str(round(t_elapsed,9)),font="arial",anchor=SW)
+dtr = canvas_1.create_text(10,30,text="dt = "+str(dt),font="arial",anchor=SW)
+t_elapsedr = canvas_1.create_text(10,50,text="t = "+str(round(t_elapsed,9)),font="arial",anchor=SW)
 
 linecol = canvas_1.create_line( 0,0,1,0, dash = (2,2) )
 
@@ -1383,6 +1382,8 @@ canvas_1.bind('<Motion>', motion)
 #Testkommentar för githubcommit
 
 ## ATT GÖRA:
+# Skapa allmän apply force-funktion som går att använda på vilken punkt som helst på vilket objekt som helst
+# Skapa mediemotstånd (luftmotstånd etc.) för rotation
 # Varför funkar den nya impulsekvationen i L2FL och inte den gamla?
 # Ha kraftpilar osv som ett separat objekt. Som Trace
 # fixa initial velocity för ball
