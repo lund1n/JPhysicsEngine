@@ -27,13 +27,12 @@ canvas_1.pack(pady=20)
 #unit_v = unit_l/unit_t
 #unit_F = unit_m*unit_l/(unit_t**2)
 
-grav = 9.82
+grav = [ 0 , 9.82 ]
 rho_air = 1.204
 rho_water = 1000.0
 rho_steel = 8000.0
 rho_rubber = 920.0
 rho_medium = rho_air
-
 
 obj = []
 con = []
@@ -89,8 +88,10 @@ def Timestep():
         #if i == 4:
             #print("Object_Ball:     " + str(obj[i].coo1))
             #print( sqrt( (obj[4].coo0[0]-obj[4].coom1[0])**2+(obj[4].coo0[1]-obj[4].coom1[1])**2 ) )
-        if i == 36:
-            print(obj[i].F_D)
+        #if i == 36:
+            #print(obj[i].F_D)
+        #if i == 15: # the mouse ball
+        #    print(obj[i].F_D)
     
     #print(obj[4].coo0[1]-obj[4].coom1[1])
     #print( sqrt( (obj[4].coo0[0]-obj[4].coom1[0])**2+(obj[4].coo0[1]-obj[4].coom1[1])**2 ) )
@@ -267,7 +268,7 @@ def Contact_dyn_statline(o1,o2,coocol,unitvec_n,unitvec_t):
     lower_t = (o1.invm + divide( (Crossprod_vec2(rcol_o1,unitvec_t))**2 , o1.I ) )
     F_t = -(upper_t/lower_t)/dt
     F_t_vec = multiply([unitvec_t[0],unitvec_t[1]],F_t)
-    F_t_unitvec = F_t_vec/-abs(F_t) # Nödvändig pga att unitvec_t ej pekar åt rätt håll
+    F_t_unitvec = Safediv(F_t_vec,-abs(F_t)) # Nödvändig pga att unitvec_t ej pekar åt rätt håll
 
     o1.F_other =  subtract( o1.F_other , F_n_vec )
     o1.F_other =  subtract( o1.F_other , F_t_vec )
@@ -706,8 +707,13 @@ class Constraint_Distance:
         self.len = array([self.cosangle*(self.AB-self.len0), self.sinangle*(self.AB-self.len0)])
 
         self.A.coo1 = [ self.A.coo1[0] + self.len[0]/2 , self.A.coo1[1] + self.len[1]/2 ]
+        #self.A.coo0 = [ self.A.coo0[0] + self.len[0]/2 , self.A.coo0[1] + self.len[1]/2 ]
+        #self.A.coom1 = [ self.A.coom1[0] + self.len[0]/2 , self.A.coom1[1] + self.len[1]/2 ]
         self.B.coo1 = [ self.B.coo1[0] - self.len[0]/2 , self.B.coo1[1] - self.len[1]/2 ]
-        
+        #self.B.coo0 = [ self.B.coo0[0] - self.len[0]/2 , self.B.coo0[1] - self.len[1]/2 ]
+        #self.B.coom1 = [ self.B.coom1[0] - self.len[0]/2 , self.B.coom1[1] - self.len[1]/2 ]
+    
+
         # Draw
         canvas_1.coords(self.line,self.A.coo1[0],self.A.coo1[1],self.B.coo1[0],self.B.coo1[1])
         canvas_1.itemconfigure(self.line,fill="black",width=2)
@@ -730,6 +736,8 @@ class Object_FixedPoint:
     def __init__(self,canvas,x,y):
         self.coofix = [x,y]
         self.coo1 = array([x, y])
+        self.coo0 = array([x, y])
+        self.coom1 = array([x, y])
         self.r = 4
         self.v0 = array([0,0])
         self.F_other = array([0,0])
@@ -758,6 +766,12 @@ class Object_Ball:
         self.C_D = 0.47
         self.coothetaline = add( self.coo1, Rotvec2([self.r,0],self.theta1) )
         #self.dampen = 0
+
+        self.vel = subtract(self.coo1,self.coo0)/dt
+        self.absvel = sqrt( (self.vel[0])**2 + (self.vel[1])**2 )
+        self.unitvec_vel = [Safediv(self.vel[0],self.absvel),Safediv(self.vel[1],self.absvel)]
+        self.A_ABfacingdirection = pi*self.r**2
+
         # Inertia
         self.m = self.rho*self.V
         self.invm = 1/self.m
@@ -767,6 +781,7 @@ class Object_Ball:
         self.F_other = array([0.0,0.0])
         self.F_other_abs = round(sqrt(self.F_other[0]**2 + self.F_other[1]**2)/10000)
         self.tau_other = 0.0
+        self.F_g = array([0.0, 0.0])
         self.F_D = array([0.0, 0.0])
         self.F_R = array([0.0, 0.0])
         # Draw
@@ -775,9 +790,14 @@ class Object_Ball:
         self.thetaline = canvas.create_line(self.coo1[0],self.coo1[1],self.coothetaline[0],self.coothetaline[1])
         #self.arrow_F = canvas.create_line(self.coo1[0],self.coo1[1],self.F_other[0],self.F_other[1],arrow=LAST,fill="grey")
         #self.text_F = canvas_1.create_text(self.coo0[0],self.coo0[1],text=str(self.F_other_abs),font=("arial",8),fill="grey")
-        self.arrow_g = canvas.create_line(self.coo1[0],self.coo1[1],self.coo1[0],self.coo1[1]+sf_farrow1*tanh(abs(self.m*grav)/sf_farrow2),arrow=LAST,fill="red")
+        
+        self.arrow_g = [ sf_farrow1*tanh((self.m*grav[0])/sf_farrow2) , sf_farrow1*tanh((self.m*grav[1])/sf_farrow2) ]
+        self.arrow_F_D = [ (sf_farrow1*tanh(self.F_D[0]/sf_farrow2)) , (sf_farrow1*tanh(self.F_D[1]/sf_farrow2)) ]
+        self.arrow_g_draw = canvas.create_line(self.coo1[0],self.coo1[1],self.coo1[0]+self.arrow_g[0],self.coo1[1]+self.arrow_g[1],arrow=LAST,fill="red")
         #self.offset_text_coo = -20
-        #self.text_coo = canvas_1.create_text(self.coo0[0],self.coo0[1]+self.offset_text_coo,text="("+str(round(self.coo0[0]))+", "+str(round(self.coo0[1]))+")",font=("arial",8))
+        #self.text_coo = canvas_1.create_text(self.coo0[0],self.coo0[1]+self.offset_text_coo,text="("+str(round(self.coo0[0]))+", "+str(round(self.coo0[1]))+")",font=("arial",8))        
+        self.arrow_F_D_draw = canvas.create_line(self.coo1[0],self.coo1[1],self.coo1[0]-self.arrow_F_D[0],self.coo1[1]-self.arrow_F_D[1],arrow=LAST,fill="blue")
+        
 
     def colcheck(self):
         if self.coo1[1] + self.r >= h_cnv:
@@ -806,12 +826,33 @@ class Object_Ball:
         #self.canvas.coords(self.text_F,self.coo1[0]+Safediv(self.F_other[0],self.F_other_abs)*viz_sf,self.coo1[1]+Safediv(self.F_other[1],self.F_other_abs)*viz_sf)
 
         #self.canvas.itemconfigure(self.text_F,text=str(round(self.F_other_abs/10000)))
-        self.canvas.coords(self.arrow_g,self.coo1[0],self.coo1[1],self.coo1[0],self.coo1[1]+tanh(abs(self.m*grav)/sf_farrow2))
+        
+        
+        self.arrow_g = [ sf_farrow1*tanh((self.m*grav[0])/sf_farrow2) , sf_farrow1*tanh((self.m*grav[1])/sf_farrow2) ]
+        self.arrow_F_D = [ (sf_farrow1*tanh(self.F_D[0]/sf_farrow2)) , (sf_farrow1*tanh(self.F_D[1]/sf_farrow2)) ]
+        self.canvas.coords(self.arrow_g_draw,self.coo1[0],self.coo1[1],self.coo1[0]+self.arrow_g[0],self.coo1[1]+self.arrow_g[1])
+        self.canvas.coords(self.arrow_F_D_draw,self.coo1[0],self.coo1[1],self.coo1[0]-self.arrow_F_D[0],self.coo1[1]-self.arrow_F_D[1])
+        
 
         #self.canvas.coords(self.text_coo,self.coo0[0],self.coo0[1]+self.offset_text_coo)
         #self.canvas.itemconfigure(self.text_coo,text="("+str(round(self.coo0[0]))+", "+str(round(self.coo0[1]))+")")
 
     def integrate(self):
+
+        self.vel = subtract(self.coo1,self.coo0)/dt
+        self.absvel = sqrt( (self.vel[0])**2 + (self.vel[1])**2 )
+        self.unitvec_vel = [Safediv(self.vel[0],self.absvel),Safediv(self.vel[1],self.absvel)]
+        self.A_ABfacingdirection = pi*self.r**2
+
+        # Drag force in the chosen medium (air, water, etc.)
+        self.F_D = multiply( 0.5*rho_medium*0.50*self.A_ABfacingdirection , multiply( [ (self.vel[0])**2 , (self.vel[1])**2 ] , self.unitvec_vel ) )
+        F_crit = self.m*self.absvel/(2*dt)
+        if sqrt( (self.F_D[0])**2 + (self.F_D[1])**2 ) >= F_crit:
+            self.F_D = multiply(F_crit,self.unitvec_vel)
+            #print("                                      Drag force limit exceeded" + str(self.F_D))
+        self.F_other = subtract( self.F_other , self.F_D )
+        # LÄGG TILL LUFTMOTSTÅND MOT ROTATION
+
         #self.coom1 = subtract( self.coo0, multiply(self.v0,dt) )
         self.coom1 = self.coo0
         #print(self.coom1)
@@ -820,7 +861,8 @@ class Object_Ball:
         self.thetam1 = self.theta0
         self.theta0 = self.theta1
         #self.v0 = [0,0]#divide(subtract(self.coo0,self.coo1), dt)
-        self.F_other = add( self.F_other, [0,self.m*grav] )
+        self.F_g = multiply(self.m,grav)
+        self.F_other = add( self.F_other, self.F_g )
         
         self.coo1 = [ 2*self.coo0[0] - self.coom1[0] + (self.F_other[0]/self.m)*dt**2 , 2*self.coo0[1] - self.coom1[1] + (self.F_other[1]/self.m)*dt**2 ]
         self.theta1 = 2*self.theta0 - self.thetam1 + (self.tau_other/self.I)*dt**2
@@ -857,6 +899,7 @@ class Object_Box:
         self.theta0 = self.theta1
         self.thetam1 = self.theta1
         # Forces and torques
+        self.F_g = [0.0,0.0]
         self.F_other = [0.0,0.0]
         self.tau_other = 0.0
         # Inertia
@@ -881,10 +924,13 @@ class Object_Box:
 
     def integrate(self):
 
+        self.F_g = multiply(self.m,grav)
+        self.F_other = add( self.F_other, self.F_g )
+
         self.coom1 = self.coo0
         self.coo0 = self.coo1
         self.v0 = array([0,0])#divide(subtract(self.coo0,self.coo1), dt)
-        self.coo1 = [ 2*self.coo0[0] - self.coom1[0] + (self.F_other[0]/self.m)*dt**2 , 2*self.coo0[1] - self.coom1[1] + (self.F_other[1]/self.m + grav)*dt**2 ]
+        self.coo1 = [ 2*self.coo0[0] - self.coom1[0] + (self.F_other[0]/self.m)*dt**2 , 2*self.coo0[1] - self.coom1[1] + (self.F_other[1]/self.m)*dt**2 ]
         self.coo1 = [ self.coo1[0], self.coo1[1], self.coo1[0]-0.5*self.w, self.coo1[1]-0.5*self.h, self.coo1[0]+0.5*self.w, self.coo1[1]-0.5*self.h, self.coo1[0]+0.5*self.w, self.coo1[1]+0.5*self.h, self.coo1[0]-0.5*self.w, self.coo1[1]+0.5*self.h ]
         #self.coo1 = [ 0,0,0,0,0,0,0,0, 2*self.coo0[8] - self.coom1[8] + (self.F_other[0]/self.m)*dt**2 , 2*self.coo0[9] - self.coom1[9] + (self.F_other[1]/self.m + grav)*dt**2 ]
         #f1 = (2*self.coo0[0] - self.coom1[0] + (self.F_other[0]/self.m)*dt**2)
@@ -1010,7 +1056,6 @@ class Object_Line:
         if yB<yA:
             self.theta1 = - self.theta1
 
-        # Ersätt med en Safedic för vektorer. Nämnaren är 0 vid programstart.
         self.vel = subtract(self.coo1,self.coo0)/dt
         self.absvel = sqrt( (self.vel[0])**2 + (self.vel[1])**2 )
         self.unitvec_vel = [Safediv(self.vel[0],self.absvel),Safediv(self.vel[1],self.absvel)]
@@ -1065,10 +1110,17 @@ class Object_Line:
         self.lineAB = canvas.create_line(self.cooA[0],self.cooA[1],self.cooB[0],self.cooB[1],width=h,fill="grey")
         self.ballA = canvas.create_oval(self.cooA[0]-self.hhalf,self.cooA[1]-self.hhalf,self.cooA[0]+self.hhalf,self.cooA[1]+self.hhalf,outline="grey",fill="grey")
         self.ballB = canvas.create_oval(self.cooB[0]-self.hhalf,self.cooB[1]-self.hhalf,self.cooB[0]+self.hhalf,self.cooB[1]+self.hhalf,outline="grey",fill="grey")
-        self.arrow_g = canvas.create_line(self.coo1[0],self.coo1[1],self.coo1[0],self.coo1[1]+tanh(abs(self.m*grav)/sf_farrow2),arrow=LAST,fill="red")
-        self.arrow_F_D = canvas.create_line(self.coo1[0],self.coo1[1],self.coo1[0]-self.unitvec_vel[0]*sf_farrow1*tanh(abs(self.F_D[0])/sf_farrow2),self.coo1[1]-self.unitvec_vel[1]*sf_farrow1*tanh(abs(self.F_D[1])/sf_farrow2),arrow=LAST,fill="blue")
+        
+        self.arrow_g = [ sf_farrow1*tanh((self.m*grav[0])/sf_farrow2) , sf_farrow1*tanh((self.m*grav[1])/sf_farrow2) ]
+        self.arrow_F_D = [ (sf_farrow1*tanh(self.F_D[0]/sf_farrow2)) , (sf_farrow1*tanh(self.F_D[1]/sf_farrow2)) ]
+        self.arrow_g_draw = canvas.create_line(self.coo1[0],self.coo1[1],self.coo1[0]+self.arrow_g[0],self.coo1[1]+self.arrow_g[1],arrow=LAST,fill="red")
+        #self.offset_text_coo = -20
+        #self.text_coo = canvas_1.create_text(self.coo0[0],self.coo0[1]+self.offset_text_coo,text="("+str(round(self.coo0[0]))+", "+str(round(self.coo0[1]))+")",font=("arial",8))        
+        self.arrow_F_D_draw = canvas.create_line(self.coo1[0],self.coo1[1],self.coo1[0]-self.arrow_F_D[0],self.coo1[1]-self.arrow_F_D[1],arrow=LAST,fill="blue")
+        
         #self.lineN = canvas.create_line(self.coomidp[0],self.coomidp[1],self.normalvec[0],self.normalvec[1],arrow=LAST)
         #self.linecol = canvas.create_line( 0,0,1,0, dash = (2,2) )
+        
 
 
 
@@ -1083,9 +1135,13 @@ class Object_Line:
         self.vec_ABfacingdirection = Vecproj_vec2(self.vec_AB,self.unitvec_velperp)
         self.A_ABfacingdirection = self.t*sqrt( (self.vec_ABfacingdirection[0])**2 + (self.vec_ABfacingdirection[1])**2 )
 
-        self.F_D = multiply( 0.5*rho_medium*1.98*self.A_ABfacingdirection , [ (self.vel[0])**2 , (self.vel[1])**2 ] )
-
-        self.F_other = self.F_other - self.F_D
+        # Drag force in the chosen medium (air, water, etc.)
+        self.F_D = multiply( 0.5*rho_medium*1.98*self.A_ABfacingdirection , multiply( [ (self.vel[0])**2 , (self.vel[1])**2 ] , self.unitvec_vel ) )
+        F_crit = self.m*self.absvel/(2*dt)
+        if sqrt( (self.F_D[0])**2 + (self.F_D[1])**2 ) >= F_crit:
+            self.F_D = multiply(F_crit,self.unitvec_vel)
+            #print("                                      Drag force limit exceeded" + str(self.F_D))
+        self.F_other = subtract( self.F_other , self.F_D )
         # LÄGG TILL LUFTMOTSTÅND MOT ROTATION
         
         self.coom1 = self.coo0
@@ -1095,7 +1151,10 @@ class Object_Line:
         #print(self.coo0)
         #self.v0 = [0,0]#divide(subtract(self.coo0,self.coo1), dt)
 
-        self.coo1 = [ 2*self.coo0[0] - self.coom1[0] + (self.F_other[0]/self.m)*dt**2 , 2*self.coo0[1] - self.coom1[1] + (self.F_other[1]/self.m + grav)*dt**2 ]
+        self.F_g = multiply(self.m,grav)
+        self.F_other = add( self.F_other, self.F_g )
+
+        self.coo1 = [ 2*self.coo0[0] - self.coom1[0] + (self.F_other[0]/self.m)*dt**2 , 2*self.coo0[1] - self.coom1[1] + (self.F_other[1]/self.m)*dt**2 ]
         self.theta1 = 2*self.theta0 - self.thetam1 + (self.tau_other/self.I)*dt**2
         self.k = Safediv( (self.cooB[1]-self.cooA[1]) , (self.cooB[0]-self.cooA[0]) )
         self.cooAloc = Rotvec2([-0.5*self.AB,0],self.theta1)
@@ -1111,8 +1170,10 @@ class Object_Line:
         self.canvas.coords(self.ballA,self.cooA[0]-self.hhalf,self.cooA[1]-self.hhalf,self.cooA[0]+self.hhalf,self.cooA[1]+self.hhalf)
         self.canvas.coords(self.ballB,self.cooB[0]-self.hhalf,self.cooB[1]-self.hhalf,self.cooB[0]+self.hhalf,self.cooB[1]+self.hhalf)
 
-        self.canvas.coords(self.arrow_g,self.coo1[0],self.coo1[1],self.coo1[0],self.coo1[1]+sf_farrow1*tanh(abs(self.m*grav)/sf_farrow2))
-        self.canvas.coords(self.arrow_F_D,self.coo1[0],self.coo1[1],self.coo1[0]-self.unitvec_vel[0]*sf_farrow1*tanh(abs(self.F_D[0])/sf_farrow2),self.coo1[1]-self.unitvec_vel[1]*sf_farrow1*tanh(abs(self.F_D[1])/sf_farrow2))
+        self.arrow_g = [ sf_farrow1*tanh((self.m*grav[0])/sf_farrow2) , sf_farrow1*tanh((self.m*grav[1])/sf_farrow2) ]
+        self.arrow_F_D = [ (sf_farrow1*tanh(self.F_D[0]/sf_farrow2)) , (sf_farrow1*tanh(self.F_D[1]/sf_farrow2)) ]
+        self.canvas.coords(self.arrow_g_draw,self.coo1[0],self.coo1[1],self.coo1[0]+self.arrow_g[0],self.coo1[1]+self.arrow_g[1])
+        self.canvas.coords(self.arrow_F_D_draw,self.coo1[0],self.coo1[1],self.coo1[0]-self.arrow_F_D[0],self.coo1[1]-self.arrow_F_D[1])
 
         #print(self.theta1*180/pi)
         #print(abs(cos(self.theta1)))
@@ -1194,7 +1255,7 @@ class Object_ShowDistance_Point_LineSegment:
         self.distint = sqrt( (self.coocol[0]-self.o1_point[0])**2 + (self.coocol[1]-self.o1_point[1])**2 )
         canvas_1.coords(self.linecol,self.coocol[0],self.coocol[1],self.o1_point[0],self.o1_point[1])
         canvas_1.coords(self.text_distint, self.coocol[0] + 0.5*(self.o1_point[0] - self.coocol[0]) , self.coocol[1] + 0.5*(self.o1_point[1] - self.coocol[1]) )
-        canvas_1.itemconfigure(self.text_distint,text=round(self.distint))
+        #canvas_1.itemconfigure(self.text_distint,text=round(self.distint))
 
 Dp = DebugPoint(0,0)
 
@@ -1324,14 +1385,12 @@ canvas_1.bind('<Motion>', motion)
 ## ATT GÖRA:
 # Varför funkar den nya impulsekvationen i L2FL och inte den gamla?
 # Ha kraftpilar osv som ett separat objekt. Som Trace
-# Bestäm en konsekvent skalningsfaktor för kraftpilarna (tror att den för grav är helt fel)
 # fixa initial velocity för ball
 # cube 
 # för fyrkanter/avlånga objekt osv, beräkna dess tvärsnittsarea som möter vinden varje tidssteg - påverkar luftmotsståndet - kan skapa vingar osv
 # skapa musdrag av prylar
 # skapa rep, med inställning av antalet delar och längd
 # allmän kodförbättring - förbättra integrationen så att den är mer samlad?
-# återinför luftmotstånd OCH ljusblåa luftmotståndspilar
 # skapa portaler?
 
 
