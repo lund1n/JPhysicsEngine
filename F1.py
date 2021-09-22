@@ -134,6 +134,7 @@ def Vecproj_vec3(v,w):
     return multiply( Safediv( v[0]*w[0] + v[1]*w[1] + v[2]*w[2] , (w[0]**2 + w[1]**2 + w[2]**2) ) , w )
 
 def ClosestPointOnLineSegment(px,py,line):
+    '''
     cooint = [0,0]
     # Distance
     # Intersection between normal line and main line, where normal line is at its closest point to object
@@ -145,7 +146,43 @@ def ClosestPointOnLineSegment(px,py,line):
     cooint[1] = (line.cooA[0]!=line.cooB[0])*( line.k*(cooint[0]-line.cooA[0])+line.cooA[1] )   +   (line.cooA[0]==line.cooB[0])*(   (py<=line.coomax[1] and py>=line.coomin[1])*py   +   (py>line.coomax[1])*line.coomax[1]   +   (py<line.coomin[1])*line.coomin[1]   ) # intersection x into fixline equation
     #canvas_1.coords(linecol,cooint[0],cooint[1],point.coo0[0],point.coo0[1])
     # Return value
-    return cooint
+    '''
+
+    theta_line = line.theta1
+    offset = line.cooA
+
+    p = [px,py]
+    vector = line.cooB
+
+    # remove offset from origin
+    p_2 = subtract([px,py],offset)
+    vector_2 = subtract(line.cooB,offset)
+
+    # transform from global coordinates x and y, to local coordinates u and v
+    p_3 = Rotvec2(p_2,-theta_line)
+    vector_3 = Rotvec2(vector_2,-theta_line)
+
+    vecumax = max(vector_3[0],0)
+    vecumin = min(vector_3[0],0)
+
+    # project vertically
+    p_4 = [p_3[0],0]
+    p_5 = p_4
+
+
+    # check edge cases
+    if p_4[0] <= vecumin:
+        p_5 = [vecumin,0]
+    if p_4[0] >= vecumax:
+        p_5 = [vecumax,0]
+
+    # transform back
+    p_6 = Rotvec2(p_5,theta_line)
+    # add offset from origin
+    p_7 = add(p_6,offset)
+
+    #return cooint
+    return p_7
 
 def ClosestPointOnLineSegmentEdgeIndicator(px,py,line):
     cooint = [0,0,0]
@@ -1127,6 +1164,13 @@ class Object_FixedLine:
         self.coomin = [ min(self.cooA[0],self.cooB[0]) , min(self.cooA[1],self.cooB[1]) ]
 
         self.AB = sqrt( (xB-xA)**2 + (yB-yA)**2 )
+
+        self.theta1 = arcsin( Safediv( abs(yB-yA) , self.AB ) )
+        # due to the angle being calculated with arcsin, and due to sins periodicity, this is necessary. otherwise, angles may be wrong, depending on endpoint placement
+        if xB<xA:
+            self.theta1 = pi - self.theta1
+        if yB<yA:
+            self.theta1 = - self.theta1
         self.r = self.AB/2
         self.ang = arccos( (xB-xA)/self.AB )
         #self.coomidp = [ self.cooA[0] + 0.5*(self.cooB[0]-self.cooA[0]) , self.cooA[1] + 0.5*(self.cooB[1]-self.cooA[1]) ]
@@ -1192,7 +1236,9 @@ class Object_Line:
         self.coo1 = array([xA + 0.5*(xB-xA), yA + 0.5*(yB-yA)])
         self.coo0 = self.coo1
         self.coom1 = self.coo1
+
         self.theta1 = arcsin( Safediv( abs(yB-yA) , self.AB ) )
+        # due to the angle being calculated with arcsin, and due to sins periodicity, this is necessary. otherwise, angles may be wrong, depending on endpoint placement
         if xB<xA:
             self.theta1 = pi - self.theta1
         if yB<yA:
@@ -1509,7 +1555,7 @@ obj.append(Object_ShowDistance_Point_LineSegment(obj[23],"cooA",obj[12]))
 obj.append(Object_ShowDistance_Point_LineSegment(obj[23],"cooB",obj[12]))
 obj.append(Object_ShowPhysics(canvas_1,obj[23]))
 
-obj.append(Object_Line(canvas_1,350,125,410,115,10,60,rho_rubber,0.5,0.5)) #270,150 | 390,70
+obj.append(Object_Line(canvas_1,470,125,410,115,10,60,rho_rubber,0.5,0.5)) #270,150 | 390,70
 
 
 x_m = 0
