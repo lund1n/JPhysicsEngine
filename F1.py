@@ -44,7 +44,7 @@ viz = []
 #colcounter = 0
 
 t_elapsed = 0
-dt = 0.025
+dt = 0.05
 
 dtr = canvas_1.create_text(10,30,text="dt = "+str(dt),font="arial",anchor=SW)
 t_elapsedr = canvas_1.create_text(10,50,text="t = "+str(round(t_elapsed,9)),font="arial",anchor=SW)
@@ -101,6 +101,13 @@ def Timestep():
 def Rotvec2(v,ang):
     return array([ cos(ang)*v[0] - sin(ang)*v[1] , sin(ang)*v[0] + cos(ang)*v[1] ])
 
+def Rotxypairsinvec(v,ang):
+    output = []
+    for i in range(0,len(v),2):
+        output.append(cos(ang)*v[i] - sin(ang)*v[i+1])
+        output.append(sin(ang)*v[i] + cos(ang)*v[i+1])
+    return output
+
 def Rotvec2_90degcw(v):
     return array([ v[1] , -v[0] ])
 
@@ -151,40 +158,36 @@ def ClosestPointOnLineSegment(px,py,line):
     theta_line = line.theta1
     offset = line.cooA
 
-    p = [px,py]
-    vector = line.cooB
-
     # remove offset from origin
-    p_2 = subtract([px,py],offset)
-    vector_2 = subtract(line.cooB,offset)
+    p = subtract([px,py],offset)
+    vector = subtract(line.cooB,offset)
 
     # transform from global coordinates x and y, to local coordinates u and v
-    p_3 = Rotvec2(p_2,-theta_line)
-    vector_3 = Rotvec2(vector_2,-theta_line)
+    p = Rotvec2(p,-theta_line)
+    vector = Rotvec2(vector,-theta_line)
 
-    vecumax = max(vector_3[0],0)
-    vecumin = min(vector_3[0],0)
+    vecumax = max(vector[0],0)
+    vecumin = min(vector[0],0)
 
     # project vertically
-    p_4 = [p_3[0],0]
-    p_5 = p_4
-
+    p[1] = 0
 
     # check edge cases
-    if p_4[0] <= vecumin:
-        p_5 = [vecumin,0]
-    if p_4[0] >= vecumax:
-        p_5 = [vecumax,0]
+    if p[0] < vecumin:
+        p = [vecumin,0]
+    if p[0] > vecumax:
+        p = [vecumax,0]
 
     # transform back
-    p_6 = Rotvec2(p_5,theta_line)
+    p = Rotvec2(p,theta_line)
     # add offset from origin
-    p_7 = add(p_6,offset)
+    p = add(p,offset)
 
     #return cooint
-    return p_7
+    return p
 
 def ClosestPointOnLineSegmentEdgeIndicator(px,py,line):
+    '''
     cooint = [0,0,0]
     # Distance
     # Intersection between normal line and main line, where normal line is at its closest point to object
@@ -198,9 +201,44 @@ def ClosestPointOnLineSegmentEdgeIndicator(px,py,line):
     #canvas_1.coords(linecol,cooint[0],cooint[1],point.coo0[0],point.coo0[1])
     # Return value
     return cooint
+    '''
+    theta_line = line.theta1
+    offset = line.cooA
 
+    # remove offset from origin
+    p = subtract([px,py],offset)
+    vector = subtract(line.cooB,offset)
 
-def ClosestPointOnBoxEdgeIndicator(px,py,linek,linecoo1,linecoo2,linecoomax,linecoomin):
+    # transform from global coordinates x and y, to local coordinates u and v
+    p = Rotvec2(p,-theta_line)
+    vector = Rotvec2(vector,-theta_line)
+
+    vecumax = max(vector[0],0)
+    vecumin = min(vector[0],0)
+
+    # project vertically
+    p[1] = 0
+    # edge_indicator = point projection perpendicular to vector, outside of vector bounds
+    edge_indicator = 0
+
+    # check edge cases
+    if p[0] < vecumin:
+        p = [vecumin,0]
+        edge_indicator = 1
+    if p[0] > vecumax:
+        p = [vecumax,0]
+        edge_indicator = 1
+
+    # transform back
+    p = Rotvec2(p,theta_line)
+    # add offset from origin
+    p = add(p,offset)
+
+    #return cooint
+    return [ p[0] , p[1] , edge_indicator ]
+
+def ClosestPointOnBoxEdgeIndicator(px,py,line): #(px,py,linek,linecoo1,linecoo2,linecoomax,linecoomin)
+    '''
     cooint = [0,0,0]
     # Distance
     # Intersection between normal line and main line, where normal line is at its closest point to object
@@ -214,7 +252,41 @@ def ClosestPointOnBoxEdgeIndicator(px,py,linek,linecoo1,linecoo2,linecoomax,line
     #canvas_1.coords(linecol,cooint[0],cooint[1],point.coo0[0],point.coo0[1])
     # Return value
     return cooint
+    '''
+    theta_line = line.theta1
+    offset = [ line.coovertex[0] , line.coovertex[1] ]
 
+    # remove offset from origin
+    p = subtract([px,py],offset)
+    vector = subtract( [ line.coovertex[2] , line.coovertex[3] ] ,offset)
+
+    # transform from global coordinates x and y, to local coordinates u and v
+    p = Rotvec2(p,-theta_line)
+    vector = Rotvec2(vector,-theta_line)
+
+    vecumax = max(vector[0],0)
+    vecumin = min(vector[0],0)
+
+    # project vertically
+    p[1] = 0
+    # edge_indicator = point projection perpendicular to vector, outside of vector bounds
+    edge_indicator = 0
+
+    # check edge cases
+    if p[0] < vecumin:
+        p = [vecumin,0]
+        edge_indicator = 1
+    if p[0] > vecumax:
+        p = [vecumax,0]
+        edge_indicator = 1
+
+    # transform back
+    p = Rotvec2(p,theta_line)
+    # add offset from origin
+    p = add(p,offset)
+
+    #return cooint
+    return [ p[0] , p[1] , edge_indicator ]
 
 def IntersectionPoint_Line_Line(l1,l2):
     cooint = [0,0]
@@ -244,9 +316,9 @@ def Check_CollisionType(o1,o2):
         if isinstance(o2, Object_Line):
             Collision_Line_FixedLine(o2,o1)
             return
-        if isinstance(o2, Object_Box):
-            Collision_Box_FixedLine(o2,o1)
-            return
+    #    if isinstance(o2, Object_Box):
+    #        Collision_Box_FixedLine(o2,o1)
+    #        return
 
     if isinstance(o1, Object_Line):
         if isinstance(o2, Object_FixedLine):
@@ -257,9 +329,9 @@ def Check_CollisionType(o1,o2):
             Collision_Line_Line(o2,o1)
             return
 
-    if isinstance(o1, Object_Box):
-        if isinstance(o2, Object_FixedLine):
-            Collision_Box_FixedLine(o1,o2)
+    #if isinstance(o1, Object_Box):
+    #    if isinstance(o2, Object_FixedLine):
+    #        Collision_Box_FixedLine(o1,o2)
 
 def Contact_line_line(o1,o2,coocol,unitvec_n,unitvec_t):
 
@@ -703,11 +775,16 @@ def Collision_Box_FixedLine(l1,l2):
     if sqrt( (l1.coo0[0]-l2.coo0[0])**2 + (l1.coo0[1]-l2.coo0[1])**2 ) <= ( sqrt( (0.5*l1.w)**2 + (0.5*l1.h)**2 ) + l2.r):
 
         #loopcoo1 = [l1.cooA[0],l1.cooB,l1.cooC,l1.cooD]
-
+        '''
         coocol_l1_1 = ClosestPointOnBoxEdgeIndicator(l1.cooA[0],l1.cooA[1],l2.k,l2.cooA,l2.cooB,l2.coomax,l2.coomin)
         coocol_l1_2 = ClosestPointOnBoxEdgeIndicator(l1.cooB[0],l1.cooB[1],l2.k,l2.cooA,l2.cooB,l2.coomax,l2.coomin)
         coocol_l2A = ClosestPointOnBoxEdgeIndicator(l2.cooA[0],l2.cooA[1],l1.kAB,l1.cooA,l1.cooB,l1.cooABmax,l1.cooABmin)
         coocol_l2B = ClosestPointOnBoxEdgeIndicator(l2.cooB[0],l2.cooB[1],l1.kAB,l1.cooA,l1.cooB,l1.cooABmax,l1.cooABmin)
+        '''
+        coocol_l1_1 = ClosestPointOnBoxEdgeIndicator(l1.cooA[0],l1.cooB[1],l2)
+        coocol_l1_2 = ClosestPointOnBoxEdgeIndicator(l1.cooA[0],l1.cooB[1],l2)
+        coocol_l2A = ClosestPointOnBoxEdgeIndicator(l2.coovertex[0],l2.coovertex[1],l1)
+        coocol_l2B = ClosestPointOnBoxEdgeIndicator(l2.coovertex[0],l2.coovertex[1],l1)
         #coocol_l2A = ClosestPointOnLineSegmentEdgeIndicator(l2.cooA[0],l2.cooA[1],l1)
         #coocol_l2B = ClosestPointOnLineSegmentEdgeIndicator(l2.cooB[0],l2.cooB[1],l1)
         distint_l1_1 = sqrt( (coocol_l1_1[0]-l1.cooA[0])**2 + (coocol_l1_1[1]-l1.cooA[1])**2 )
@@ -773,7 +850,6 @@ def Collision_Box_FixedLine(l1,l2):
             l1.coom1 = l1.coom1 + multiply([unitvec_n[0],unitvec_n[1]],fac*(r_pinball-distint_l2B))
             l1.cooA = l1.cooA + multiply([unitvec_n[0],unitvec_n[1]],fac*(r_pinball-distint_l2B))
             l1.cooB = l1.cooB + multiply([unitvec_n[0],unitvec_n[1]],fac*(r_pinball-distint_l2B))
-
 
 class Constraint_SpringDamper:
     def __init__(self,A,B,len0,k,damping):
@@ -1047,6 +1123,9 @@ class Object_Box:
         self.theta0 = -0.01
         self.thetam1 = self.theta1
         self.coovertexloc = [ -0.5*w , -0.5*h , 0.5*w , -0.5*h , 0.5*w , 0.5*h , -0.5*w , 0.5*h ]
+        self.coovertexloc = Rotxypairsinvec(self.coovertexloc,self.theta1)
+        self.coovertex = [ self.coo1[0]+self.coovertexloc[0] , self.coo1[1]+self.coovertexloc[1] , self.coo1[0]+self.coovertexloc[2] , self.coo1[1]+self.coovertexloc[3] , self.coo1[0]+self.coovertexloc[4] , self.coo1[1]+self.coovertexloc[5] , self.coo1[0]+self.coovertexloc[6] , self.coo1[1]+self.coovertexloc[7] ]
+        '''
         self.cooAloc = Rotvec2([ -0.5*w , -0.5*h ],self.theta1)
         self.cooBloc = Rotvec2([ 0.5*w , -0.5*h ],self.theta1)
         self.cooCloc = Rotvec2([ 0.5*w , 0.5*h ],self.theta1)
@@ -1055,7 +1134,6 @@ class Object_Box:
         self.cooB = add( self.coo1, self.cooBloc )
         self.cooC = add( self.coo1, self.cooCloc )
         self.cooD = add( self.coo1, self.cooDloc )
-
         self.cooABmax = [ max(self.cooA[0],self.cooB[0]) , max(self.cooA[1],self.cooB[1]) ]
         self.cooBCmax = [ max(self.cooB[0],self.cooC[0]) , max(self.cooB[1],self.cooC[1]) ]
         self.cooCDmax = [ max(self.cooC[0],self.cooD[0]) , max(self.cooC[1],self.cooD[1]) ]
@@ -1068,6 +1146,7 @@ class Object_Box:
 
         self.kAB = Safediv( (self.cooB[1]-self.cooA[1]) , (self.cooB[0]-self.cooA[0]) )
         self.kBC = Safediv( (self.cooC[1]-self.cooB[1]) , (self.cooC[0]-self.cooB[0]) )
+        '''
         #self.kC = Safediv( (self.cooD[1]-self.cooC[1]) , (self.cooD[0]-self.cooC[0]) )
         #self.kD = Safediv( (self.cooA[1]-self.cooD[1]) , (self.cooA[0]-self.cooD[0]) )
         #print(self.kA)
@@ -1084,19 +1163,32 @@ class Object_Box:
         self.I = 0.08333*self.m*(w*w+h*h)
         self.invImat = [ [1/self.I,0,0] , [0,0,0] , [0,0,1/self.I] ]
         # Draw
+        '''
         self.lineAB = canvas.create_line(self.cooA[0],self.cooA[1],self.cooB[0],self.cooB[1])
         self.lineBC = canvas.create_line(self.cooB[0],self.cooB[1],self.cooC[0],self.cooC[1])
         self.lineCD = canvas.create_line(self.cooC[0],self.cooC[1],self.cooD[0],self.cooD[1])
         self.lineDA = canvas.create_line(self.cooD[0],self.cooD[1],self.cooA[0],self.cooA[1])
         self.ball = canvas.create_oval(x-3,y-3,x+3,y+3,outline="grey",fill="grey")
+        '''
+        self.lineAB = self.canvas.create_line( self.coovertex[0],self.coovertex[1],self.coovertex[2],self.coovertex[3] )
+        self.lineBC = self.canvas.create_line( self.coovertex[2],self.coovertex[3],self.coovertex[4],self.coovertex[5] )
+        self.lineCD = self.canvas.create_line( self.coovertex[4],self.coovertex[5],self.coovertex[6],self.coovertex[7] )
+        self.lineDA = self.canvas.create_line( self.coovertex[6],self.coovertex[7],self.coovertex[0],self.coovertex[1] )
+        self.ball = self.canvas.create_oval( self.coo1[0]-3,self.coo1[1]-3,self.coo1[0]+3,self.coo1[1]+3,outline="grey",fill="grey" )
 
 
     def draw(self):
+        '''
         self.canvas.coords( self.lineAB,self.cooA[0],self.cooA[1],self.cooB[0],self.cooB[1] )
         self.canvas.coords( self.lineBC,self.cooB[0],self.cooB[1],self.cooC[0],self.cooC[1] )
         self.canvas.coords( self.lineCD,self.cooC[0],self.cooC[1],self.cooD[0],self.cooD[1] )
         self.canvas.coords( self.lineDA,self.cooD[0],self.cooD[1],self.cooA[0],self.cooA[1] )
-        #self.canvas.coords( self.ball,self.coo1[0]-5,self.coo1[1]-5,self.coo1[0]+5,self.coo1[1]+5 )
+        self.canvas.coords( self.ball,self.coo1[0]-3,self.coo1[1]-3,self.coo1[0]+3,self.coo1[1]+3 )
+        '''
+        self.canvas.coords( self.lineAB,self.coovertex[0],self.coovertex[1],self.coovertex[2],self.coovertex[3] )
+        self.canvas.coords( self.lineBC,self.coovertex[2],self.coovertex[3],self.coovertex[4],self.coovertex[5] )
+        self.canvas.coords( self.lineCD,self.coovertex[4],self.coovertex[5],self.coovertex[6],self.coovertex[7] )
+        self.canvas.coords( self.lineDA,self.coovertex[6],self.coovertex[7],self.coovertex[0],self.coovertex[1] )
         self.canvas.coords( self.ball,self.coo1[0]-3,self.coo1[1]-3,self.coo1[0]+3,self.coo1[1]+3 )
         #print("--------")
         #print(self.cooA)
@@ -1115,21 +1207,26 @@ class Object_Box:
         self.coo0 = self.coo1
         self.thetam1 = self.theta0
         self.theta0 = self.theta1
+        '''
         #self.cooAloc = Rotvec2([-0.5*self.AB,0],self.theta1)
         #self.cooBloc = Rotvec2([0.5*self.AB,0],self.theta1)
         self.cooAloc = Rotvec2([ -0.5*self.w , -0.5*self.h ],self.theta1)
         self.cooBloc = Rotvec2([ 0.5*self.w , -0.5*self.h ],self.theta1)
         self.cooCloc = Rotvec2([ 0.5*self.w , 0.5*self.h ],self.theta1)
         self.cooDloc = Rotvec2([ -0.5*self.w , 0.5*self.h ],self.theta1)
+        '''
         self.v0 = array([0,0])#divide(subtract(self.coo0,self.coo1), dt)
         self.coo1 = [ 2*self.coo0[0] - self.coom1[0] + (self.F_other[0]/self.m)*dt**2 , 2*self.coo0[1] - self.coom1[1] + (self.F_other[1]/self.m)*dt**2 ]
         self.theta1 = 2*self.theta0 - self.thetam1 + (self.tau_other/self.I)*dt**2
         #self.coo1 = [ self.coo1[0], self.coo1[1], self.coo1[0]-0.5*self.w, self.coo1[1]-0.5*self.h, self.coo1[0]+0.5*self.w, self.coo1[1]-0.5*self.h, self.coo1[0]+0.5*self.w, self.coo1[1]+0.5*self.h, self.coo1[0]-0.5*self.w, self.coo1[1]+0.5*self.h ]
+        self.coovertexloc = [ -0.5*self.w , -0.5*self.h , 0.5*self.w , -0.5*self.h , 0.5*self.w , 0.5*self.h , -0.5*self.w , 0.5*self.h ]
+        self.coovertexloc = Rotxypairsinvec(self.coovertexloc,self.theta1)
+        self.coovertex = [ self.coo1[0]+self.coovertexloc[0] , self.coo1[1]+self.coovertexloc[1] , self.coo1[0]+self.coovertexloc[2] , self.coo1[1]+self.coovertexloc[3] , self.coo1[0]+self.coovertexloc[4] , self.coo1[1]+self.coovertexloc[5] , self.coo1[0]+self.coovertexloc[6] , self.coo1[1]+self.coovertexloc[7] ]
+        '''
         self.cooA = add( self.coo1, self.cooAloc )
         self.cooB = add( self.coo1, self.cooBloc )
         self.cooC = add( self.coo1, self.cooCloc )
         self.cooD = add( self.coo1, self.cooDloc )
-
         self.cooABmax = [ max(self.cooA[0],self.cooB[0]) , max(self.cooA[1],self.cooB[1]) ]
         self.cooBCmax = [ max(self.cooB[0],self.cooC[0]) , max(self.cooB[1],self.cooC[1]) ]
         self.cooCDmax = [ max(self.cooC[0],self.cooD[0]) , max(self.cooC[1],self.cooD[1]) ]
@@ -1139,10 +1236,10 @@ class Object_Box:
         self.cooBCmin = [ min(self.cooB[0],self.cooC[0]) , min(self.cooB[1],self.cooC[1]) ]
         self.cooCDmin = [ min(self.cooC[0],self.cooD[0]) , min(self.cooC[1],self.cooD[1]) ]
         self.cooDAmin = [ min(self.cooD[0],self.cooA[0]) , min(self.cooD[1],self.cooA[1]) ]
-
+        
         self.kAB = Safediv( (self.cooB[1]-self.cooA[1]) , (self.cooB[0]-self.cooA[0]) )
         self.kBC = Safediv( (self.cooC[1]-self.cooB[1]) , (self.cooC[0]-self.cooB[0]) )
-
+        '''
         self.draw()
 
 class Object_FixedLine:
@@ -1463,7 +1560,7 @@ obj.append(Object_Ball(canvas_1,450,150,10,rho_rubber,0.5,0.6)) #spring cube bal
 obj[3].v0[0] = 0.0
 obj[3].v0[1] = 0.0
 
-obj.append(Object_Ball(canvas_1,480,230,15,rho_rubber,0.5,0.6))
+obj.append(Object_Ball(canvas_1,480,90,15,rho_rubber,0.5,0.6))
 obj[4].v0[0] = 3.0
 obj[4].v0[1] = 0.0
 
@@ -1485,7 +1582,7 @@ obj.append(Object_Ball(canvas_1,140,70,12,rho_rubber,0.5,0.6))
 obj[9].v0[0] = 0.0
 obj[9].v0[1] = 0.0
 
-obj.append(Object_FixedLine(canvas_1,320,200,445,300,5,0.5,0.6))
+obj.append(Object_FixedLine(canvas_1,320,200,405,250,5,0.5,0.6))
 obj.append(Object_FixedLine(canvas_1,450,500,620,500,5,0.5,0.6))
 
 obj.append(Object_FixedLine(canvas_1,315,h_cnv-100,800,h_cnv-100,5,0.5,0.3))
@@ -1555,7 +1652,9 @@ obj.append(Object_ShowDistance_Point_LineSegment(obj[23],"cooA",obj[12]))
 obj.append(Object_ShowDistance_Point_LineSegment(obj[23],"cooB",obj[12]))
 obj.append(Object_ShowPhysics(canvas_1,obj[23]))
 
-obj.append(Object_Line(canvas_1,470,125,410,115,10,60,rho_rubber,0.5,0.5)) #270,150 | 390,70
+obj.append(Object_Line(canvas_1,500,75,310,65,1.5,150,rho_rubber,0.5,0.5)) #270,150 | 390,70
+
+obj.append(Object_ShowPhysics(canvas_1,obj[36]))
 
 
 x_m = 0
