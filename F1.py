@@ -316,9 +316,9 @@ def Check_CollisionType(o1,o2):
         if isinstance(o2, Object_Line):
             Collision_Line_FixedLine(o2,o1)
             return
-    #    if isinstance(o2, Object_Box):
-    #        Collision_Box_FixedLine(o2,o1)
-    #        return
+        #if isinstance(o2, Object_Box):
+        #    Collision_Box_FixedLine(o2,o1)
+        #    return
 
     if isinstance(o1, Object_Line):
         if isinstance(o2, Object_FixedLine):
@@ -1261,22 +1261,26 @@ class Object_FixedLine:
         self.coomin = [ min(self.cooA[0],self.cooB[0]) , min(self.cooA[1],self.cooB[1]) ]
 
         self.AB = sqrt( (xB-xA)**2 + (yB-yA)**2 )
-
+        '''
         self.theta1 = arcsin( Safediv( abs(yB-yA) , self.AB ) )
         # due to the angle being calculated with arcsin, and due to sins periodicity, this is necessary. otherwise, angles may be wrong, depending on endpoint placement
         if xB<xA:
             self.theta1 = pi - self.theta1
         if yB<yA:
             self.theta1 = - self.theta1
+        '''
+        self.theta1 = arctan( Safediv( yB-yA , xB-xA ) )
+        #self.text_test = canvas_1.create_text(self.coo0[0],self.coo0[1]-20,text=str(round(180/pi*self.theta1,3)),font=("arial",8))
+
         self.r = self.AB/2
-        self.ang = arccos( (xB-xA)/self.AB )
+        #self.ang = arccos( (xB-xA)/self.AB )
         #self.coomidp = [ self.cooA[0] + 0.5*(self.cooB[0]-self.cooA[0]) , self.cooA[1] + 0.5*(self.cooB[1]-self.cooA[1]) ]
-        self.unitvec_n = Rotvec2( [1,0] , self.ang-pi/2 )
+        #self.unitvec_n = Rotvec2( [1,0] , self.theta1-pi/2 )
         #self.normalvec = add( Rotvec2( [20,0] , self.ang-pi/2 ) , self.coomidp )
         #self.nvec = [0,0]
-        self.k = Safediv( (self.cooB[1]-self.cooA[1]) , (self.cooB[0]-self.cooA[0]) )
-        self.coocol = [0,0]
-        self.distint = 0
+        #self.k = Safediv( (self.cooB[1]-self.cooA[1]) , (self.cooB[0]-self.cooA[0]) )
+        #self.coocol = [0,0]
+        #self.distint = 0
         #self.text_distint = canvas_1.create_text(0,0,text="",font=("arial",8))
 
         # Forces
@@ -1333,13 +1337,16 @@ class Object_Line:
         self.coo1 = array([xA + 0.5*(xB-xA), yA + 0.5*(yB-yA)])
         self.coo0 = self.coo1
         self.coom1 = self.coo1
-
+        '''
         self.theta1 = arcsin( Safediv( abs(yB-yA) , self.AB ) )
         # due to the angle being calculated with arcsin, and due to sins periodicity, this is necessary. otherwise, angles may be wrong, depending on endpoint placement
         if xB<xA:
             self.theta1 = pi - self.theta1
         if yB<yA:
             self.theta1 = - self.theta1
+        '''
+        self.theta1 = arctan( Safediv( yB-yA , xB-xA ) )
+
 
         self.vel = subtract(self.coo1,self.coo0)/dt
         self.absvel = sqrt( (self.vel[0])**2 + (self.vel[1])**2 )
@@ -1360,8 +1367,8 @@ class Object_Line:
         self.cooAloc = subtract(self.cooA,self.coo1)
         self.cooBloc = subtract(self.cooB,self.coo1)
          # Bättre att beräkna dessa en gång, istället för varje gång under kontaktsökningen
-        self.coomax = [ max(self.cooA[0],self.cooB[0]) , max(self.cooA[1],self.cooB[1]) ] #ta bort?
-        self.coomin = [ min(self.cooA[0],self.cooB[0]) , min(self.cooA[1],self.cooB[1]) ] #ta bort?
+        #self.coomax = [ max(self.cooA[0],self.cooB[0]) , max(self.cooA[1],self.cooB[1]) ] #ta bort?
+        #self.coomin = [ min(self.cooA[0],self.cooB[0]) , min(self.cooA[1],self.cooB[1]) ] #ta bort?
         #print(self.cooAloc)
         #print(self.cooA)
         #print(self.cooB)
@@ -1372,7 +1379,7 @@ class Object_Line:
         self.I = 0.08333*self.m*(h*h+self.AB**2)
         self.invImat = [ [1/self.I,0,0] , [0,0,0] , [0,0,1/self.I] ]
         
-        self.ang = arccos( (xB-xA)/self.AB )
+        #self.ang = arccos( (xB-xA)/self.AB )
         #print(self.theta1*180/pi)
 
         #if self.cooA[1]>self.cooB[1]:
@@ -1380,12 +1387,12 @@ class Object_Line:
 
         #print(self.ang*180/pi)
         #self.coomidp = [ self.cooA[0] + 0.5*(self.cooB[0]-self.cooA[0]) , self.cooA[1] + 0.5*(self.cooB[1]-self.cooA[1]) ]
-        self.unitvec_n = Rotvec2( [1,0] , self.ang-pi/2 )
+        #self.unitvec_n = Rotvec2( [1,0] , self.theta1-pi/2 )
         #self.normalvec = add( Rotvec2( [20,0] , self.ang-pi/2 ) , self.coomidp )
         #self.nvec = [0,0]
-        self.k = Safediv( (self.cooB[1]-self.cooA[1]) , (self.cooB[0]-self.cooA[0]) )
-        self.coocol = [0,0]
-        self.distint = 0
+        #self.k = Safediv( (self.cooB[1]-self.cooA[1]) , (self.cooB[0]-self.cooA[0]) )
+        #self.coocol = [0,0]
+        #self.distint = 0
         #self.text_distint = canvas_1.create_text(0,0,text="",font=("arial",8))
 
         # Forces
@@ -1441,13 +1448,13 @@ class Object_Line:
 
         self.coo1 = [ 2*self.coo0[0] - self.coom1[0] + (self.F_other[0]/self.m)*dt**2 , 2*self.coo0[1] - self.coom1[1] + (self.F_other[1]/self.m)*dt**2 ]
         self.theta1 = 2*self.theta0 - self.thetam1 + (self.tau_other/self.I)*dt**2
-        self.k = Safediv( (self.cooB[1]-self.cooA[1]) , (self.cooB[0]-self.cooA[0]) )
+        #self.k = Safediv( (self.cooB[1]-self.cooA[1]) , (self.cooB[0]-self.cooA[0]) )
         self.cooAloc = Rotvec2([-0.5*self.AB,0],self.theta1)
         self.cooBloc = Rotvec2([0.5*self.AB,0],self.theta1)
         self.cooA = add(self.coo1 , self.cooAloc)
         self.cooB = add(self.coo1 , self.cooBloc)
-        self.coomax = [ max(self.cooA[0],self.cooB[0]) , max(self.cooA[1],self.cooB[1]) ] #ta bort?
-        self.coomin = [ min(self.cooA[0],self.cooB[0]) , min(self.cooA[1],self.cooB[1]) ] #ta bort?
+        #self.coomax = [ max(self.cooA[0],self.cooB[0]) , max(self.cooA[1],self.cooB[1]) ] #ta bort?
+        #self.coomin = [ min(self.cooA[0],self.cooB[0]) , min(self.cooA[1],self.cooB[1]) ] #ta bort?
 
         #print(self.cooA)
         #print(self.cooB)
@@ -1519,7 +1526,7 @@ class Object_ShowPhysics:
         #canvas_1.coords(self.Farrow2,self.coo1[0],self.coo1[1]-self.offset_arrow,self.coo1[0]+self.Farrow[0],self.coo1[1]-self.offset_arrow+self.Farrow[1])
         #canvas_1.coords(self.Farrow2,self.coo1[0],self.coo1[1]-self.offset_arrow,self.coo1[0]+self.F[0],self.coo1[1]-self.offset_arrow+self.F[1])
         
-        canvas_1.itemconfigure(self.text_vel,text="m = "+str(round(self.target.m,2))+" kg"+"\nI = "+str(round(self.target.I,2))+" kg/m^2"+"\nx, y = "+str(round(self.coo0[0]))+", "+str(round(self.coo0[1]))+"\nvel = "+str(round(self.absvel,1))+" m/s"+"\nomega = "+str(round(self.omega,3))+" rad/s"+"\nvel_t = "+str(round(self.omega*self.target.r,1))+" m/s"+"\nE_k = "+str(round(self.Ektrans+self.Ekrot))+" J")
+        canvas_1.itemconfigure(self.text_vel,text="m = "+str(round(self.target.m,2))+" kg"+"\nI = "+str(round(self.target.I,2))+" kg/m^2"+"\nx, y = "+str(round(self.coo0[0]))+", "+str(round(self.coo0[1]))+"\ntheta_1 = "+str(round(180/pi*self.theta1))+" degrees"+"\nvel = "+str(round(self.absvel,1))+" m/s"+"\nomega = "+str(round(self.omega,3))+" rad/s"+"\nvel_t = "+str(round(self.omega*self.target.r,1))+" m/s"+"\nE_k = "+str(round(self.Ektrans+self.Ekrot))+" J")
         canvas_1.coords(self.text_vel,self.coo1[0]+self.offset,self.coo1[1]-self.offset)
 
 class Object_ShowDistance_Point_LineSegment:
@@ -1582,7 +1589,7 @@ obj.append(Object_Ball(canvas_1,140,70,12,rho_rubber,0.5,0.6))
 obj[9].v0[0] = 0.0
 obj[9].v0[1] = 0.0
 
-obj.append(Object_FixedLine(canvas_1,320,200,405,250,5,0.5,0.6))
+obj.append(Object_FixedLine(canvas_1,320,200,415,260,5,0.5,0.6))
 obj.append(Object_FixedLine(canvas_1,450,500,620,500,5,0.5,0.6))
 
 obj.append(Object_FixedLine(canvas_1,315,h_cnv-100,800,h_cnv-100,5,0.5,0.3))
@@ -1630,7 +1637,7 @@ con.append(Constraint_Distance(obj[21],obj[22],50))
 #obj.append(Object_ShowDistance_Point_LineSegment(obj[4],obj[10]))
 #obj.append(Object_ShowDistance_Point_LineSegment(obj[4],obj[11]))
 
-obj.append(Object_Line(canvas_1,260,150,380,140,10,40,rho_steel,0.25,0.2)) #270,150 | 390,70
+obj.append(Object_Line(canvas_1,290,150,360,140,10,40,rho_steel,0.25,0.2)) #270,150 | 390,70
 
 obj.append(Object_ShowDistance_Point_LineSegment(obj[15],"coo1",obj[10]))
 obj.append(Object_ShowDistance_Point_LineSegment(obj[15],"coo1",obj[11]))
@@ -1652,7 +1659,7 @@ obj.append(Object_ShowDistance_Point_LineSegment(obj[23],"cooA",obj[12]))
 obj.append(Object_ShowDistance_Point_LineSegment(obj[23],"cooB",obj[12]))
 obj.append(Object_ShowPhysics(canvas_1,obj[23]))
 
-obj.append(Object_Line(canvas_1,500,75,310,65,1.5,150,rho_rubber,0.5,0.5)) #270,150 | 390,70
+obj.append(Object_Line(canvas_1,400,75,310,95,3.5,50,rho_rubber,0.5,0.5)) #270,150 | 390,70
 
 obj.append(Object_ShowPhysics(canvas_1,obj[36]))
 
