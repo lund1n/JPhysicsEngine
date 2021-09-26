@@ -607,8 +607,6 @@ def Collision_Ball_Line(ball,line):
 
         line.coovertex = subtract( line.coovertex , multiply(line.m/(ball.m+line.m)*pendist, [unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1]] ))
 
-
-
 def Collision_Line_Line(l1,l2):
     
     r_pinball = l1.hhalf + l2.hhalf
@@ -725,7 +723,12 @@ def Collision_Line_FixedLine(l1,l2):
         distint_l1A = sqrt( (coocol_l1A[0]-l1.coovertex[0])**2 + (coocol_l1A[1]-l1.coovertex[1])**2 )
         distint_l1B = sqrt( (coocol_l1B[0]-l1.coovertex[2])**2 + (coocol_l1B[1]-l1.coovertex[3])**2 )
         distint_l2A = sqrt( (coocol_l2A[0]-l2.coovertex[0])**2 + (coocol_l2A[1]-l2.coovertex[1])**2 )
-        distint_l2B = sqrt( (coocol_l2B[0]-l2.coovertex[3])**2 + (coocol_l2B[1]-l2.coovertex[3])**2 )
+        distint_l2B = sqrt( (coocol_l2B[0]-l2.coovertex[2])**2 + (coocol_l2B[1]-l2.coovertex[3])**2 )
+
+        viz.append( canvas_1.create_line(coocol_l1A[0],coocol_l1A[1],l1.coovertex[0],l1.coovertex[1],fill="green") )
+        viz.append( canvas_1.create_line(coocol_l1B[0],coocol_l1B[1],l1.coovertex[2],l1.coovertex[3],fill="green") )
+        viz.append( canvas_1.create_line(coocol_l2A[0],coocol_l2A[1],l2.coovertex[0],l2.coovertex[1],fill="green") )
+        viz.append( canvas_1.create_line(coocol_l2B[0],coocol_l2B[1],l2.coovertex[2],l2.coovertex[3],fill="green") )
 
         if distint_l1A <= r_pinball and coocol_l1A[2]==0:
             unitvec_n = divide( [ l1.coovertex[0] - coocol_l1A[0] , l1.coovertex[1] - coocol_l1A[1] , 0 ] , distint_l1A )
@@ -741,7 +744,6 @@ def Collision_Line_FixedLine(l1,l2):
             #l1.cooA = l1.cooA + multiply([unitvec_n[0],unitvec_n[1]],fac*(r_pinball-distint_l1A))
             #l1.cooB = l1.cooB + multiply([unitvec_n[0],unitvec_n[1]],fac*(r_pinball-distint_l1A))
             l1.coovertex = l1.coovertex + multiply([unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1]],fac*(r_pinball-distint_l1A))
-
 
             #colcounter = colcounter + 1
             #print(str(colcounter)+" - l1A - "+str(coocol_l1A[2]))
