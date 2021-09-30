@@ -29,6 +29,7 @@ canvas_1.pack(pady=20)
 grav = [ 0 , 9.82 ]
 rho_air = 1.204
 rho_water = 1000.0
+rho_honey = 1400.0
 rho_steel = 8000.0
 rho_rubber = 920.0
 rho_medium = rho_air
@@ -44,7 +45,7 @@ viz = []
 colcounter = 0
 
 t_elapsed = 0
-dt = 0.05
+dt = 0.025
 
 dtr = canvas_1.create_text(10,20,text="dt = "+str(dt),font=("arial",8),anchor=SW)
 t_elapsedr = canvas_1.create_text(10,30,text="t = "+str(round(t_elapsed,9)),font=("arial",8),anchor=SW)
@@ -140,6 +141,7 @@ def Vecproj_vec2(v,w):
 def Vecproj_vec3(v,w):
     return multiply( Safediv( v[0]*w[0] + v[1]*w[1] + v[2]*w[2] , (w[0]**2 + w[1]**2 + w[2]**2) ) , w )
 
+### ej längre nödvändig
 def ClosestPointOnLineSegment(px,py,line):
     '''
     cooint = [0,0]
@@ -185,8 +187,9 @@ def ClosestPointOnLineSegment(px,py,line):
 
     #return cooint
     return p
+###
 
-def ClosestPointOnLineSegmentEdgeIndicator(px,py,obj,objline):
+def ClosestPointOnLineSegmentEdgeIndicator(px,py,line):
     '''
     cooint = [0,0,0]
     # Distance
@@ -202,33 +205,38 @@ def ClosestPointOnLineSegmentEdgeIndicator(px,py,obj,objline):
     # Return value
     return cooint
     '''
-    theta_obj = arctan( Safediv( objline[3]-objline[1] , objline[2]-objline[0] ) )
+    theta_obj = arctan( Safediv( line[3]-line[1] , line[2]-line[0] ) )
     #theta_obj = obj.theta1
-    offset = [ objline[0] , objline[1] ]
+    offset = [ line[0] , line[1] ]
 
     # remove offset from origin
     p = subtract([px,py],offset)
-    vector = subtract( [ objline[2] , objline[3] ],offset)
+    vector = subtract( [ line[2] , line[3] ],offset)
 
     # transform from global coordinates x and y, to local coordinates u and v
     p = Rotvec2(p,-theta_obj)
     vector = Rotvec2(vector,-theta_obj)
 
+    distint = abs(p[1])
+
     vecumax = max(vector[0],0)
     vecumin = min(vector[0],0)
 
-    # project vertically
-    p[1] = 0
     # edge_indicator = point projection perpendicular to vector, outside of vector bounds
     edge_indicator = 0
 
     # check edge cases
     if p[0] < vecumin:
+        distint = sqrt( (p[0]-vecumin)**2 + (p[1])**2 )
         p = [vecumin,0]
         edge_indicator = 1
     if p[0] > vecumax:
+        distint = sqrt( (p[0]-vecumax)**2 + (p[1])**2 )
         p = [vecumax,0]
         edge_indicator = 1
+
+    # project vertically
+    p[1] = 0
 
     # transform back
     p = Rotvec2(p,theta_obj)
@@ -236,7 +244,7 @@ def ClosestPointOnLineSegmentEdgeIndicator(px,py,obj,objline):
     p = add(p,offset)
 
     #return cooint
-    return [ p[0] , p[1] , edge_indicator ]
+    return [ p[0] , p[1] , distint, edge_indicator ]
 
 def IntersectionPoint_Line_Line(l1,l2):
     cooint = [0,0]
@@ -328,7 +336,7 @@ def Contact_line_line(o1,o2,coocol,unitvec_n,unitvec_t):
 
 
     # Draw contact point
-    viz.append( canvas_1.create_oval(coocol[0]-4,coocol[1]-4,coocol[0]+4,coocol[1]+4,fill="red",outline="red") )
+    viz.append( canvas_1.create_oval(coocol[0]-3,coocol[1]-3,coocol[0]+3,coocol[1]+3,fill="red",outline="red") )
     # Draw force arrows
     #viz.append( canvas_1.create_line(coocol[0]-unitvec_n[0]*viz_sf,coocol[1]-unitvec_n[1]*viz_sf,coocol[0]+unitvec_n[0]*viz_sf,coocol[1]+unitvec_n[1]*viz_sf,arrow=BOTH,fill="green") )
     viz.append( canvas_1.create_line(coocol[0]-unitvec_n[0]*sf_farrow1*tanh(abs(F_n)/sf_farrow2),coocol[1]-unitvec_n[1]*sf_farrow1*tanh(abs(F_n)/sf_farrow2),coocol[0]+unitvec_n[0]*sf_farrow1*tanh(abs(F_n)/sf_farrow2),coocol[1]+unitvec_n[1]*sf_farrow1*tanh(abs(F_n)/sf_farrow2),arrow=BOTH,fill="red") )
@@ -365,7 +373,7 @@ def Contact_dyn_statline(o1,o2,coocol,unitvec_n,unitvec_t):
     o1.tau_other =  subtract( o1.tau_other , tauo1_t[2] )
     
     # Draw contact point
-    viz.append( canvas_1.create_oval(coocol[0]-4,coocol[1]-4,coocol[0]+4,coocol[1]+4,fill="red",outline="red") )
+    viz.append( canvas_1.create_oval(coocol[0]-3,coocol[1]-3,coocol[0]+3,coocol[1]+3,fill="red",outline="red") )
     # Draw normal force arrow
     #viz.append( canvas_1.create_line(coocol[0],coocol[1],coocol[0]+unitvec_n[0]*viz_sf,coocol[1]+unitvec_n[1]*viz_sf,arrow=LAST,fill="red") )
     #viz.append( canvas_1.create_line(coocol[0],coocol[1],coocol[0]+unitvec_n[0]*abs(F_n)/viz_sf2,coocol[1]+unitvec_n[1]*abs(F_n)/viz_sf2,arrow=LAST,fill="red") )
@@ -419,7 +427,7 @@ def Contact_dyn_line(o1,o2,coocol,unitvec_n,unitvec_t):
     o2.F_other =  add( o2.F_other , multiply([unitvec_t[0],unitvec_t[1]],F_t) )
     
     # Draw contact point
-    viz.append( canvas_1.create_oval(coocol[0]-4,coocol[1]-4,coocol[0]+4,coocol[1]+4,fill="red",outline="red") )
+    viz.append( canvas_1.create_oval(coocol[0]-3,coocol[1]-3,coocol[0]+3,coocol[1]+3,fill="red",outline="red") )
     # Draw force arrows
     #viz.append( canvas_1.create_line(coocol[0]-unitvec_n[0]*viz_sf,coocol[1]-unitvec_n[1]*viz_sf,coocol[0]+unitvec_n[0]*viz_sf,coocol[1]+unitvec_n[1]*viz_sf,arrow=BOTH,fill="green") )
     viz.append( canvas_1.create_line(coocol[0]-unitvec_n[0]*sf_farrow1*tanh(abs(F_n)/sf_farrow2),coocol[1]-unitvec_n[1]*sf_farrow1*tanh(abs(F_n)/sf_farrow2),coocol[0]+unitvec_n[0]*sf_farrow1*tanh(abs(F_n)/sf_farrow2),coocol[1]+unitvec_n[1]*sf_farrow1*tanh(abs(F_n)/sf_farrow2),arrow=BOTH,fill="red") )
@@ -506,9 +514,10 @@ def Collision_Ball_Ball(b1,b2):
 
 def Collision_Ball_FixedLine(ball,line):
     # Coordinates of intersection point
-    coocol = ClosestPointOnLineSegment(ball.coo1[0],ball.coo1[1],line)
+    coocol = ClosestPointOnLineSegmentEdgeIndicator(ball.coo1[0],ball.coo1[1],line.coovertex)
     # Distance between object and intersection point
-    distint = sqrt( (coocol[0]-ball.coo1[0])**2 + (coocol[1]-ball.coo1[1])**2 ) # distance between point and fixline
+    distint2 = sqrt( (coocol[0]-ball.coo1[0])**2 + (coocol[1]-ball.coo1[1])**2 ) # distance between point and fixline
+    distint = coocol[2]
 
     if distint < ball.r+line.hhalf:
         unitvec_n = divide( array([ ball.coo1[0]-coocol[0] , ball.coo1[1]-coocol[1] , 0 ]) , distint ) # Unit normal vector
@@ -516,7 +525,7 @@ def Collision_Ball_FixedLine(ball,line):
         #unitvec_n = line.unitvec_n
         #unitvec_t = line.unitvec_t
 
-        coocol_hcomp = add( coocol, multiply( line.hhalf, [ unitvec_n[0], unitvec_n[1] ] ) )
+        coocol_hcomp = add( [coocol[0],coocol[1],0], multiply( line.hhalf, [ unitvec_n[0], unitvec_n[1] , 0 ] ) )
 
         Contact_dyn_statline(ball,line,coocol_hcomp,unitvec_n,unitvec_t)
 
@@ -529,15 +538,16 @@ def Collision_Ball_FixedLine(ball,line):
 
 def Collision_Ball_Line(ball,line):
     # Coordinates of intersection point
-    coocol = ClosestPointOnLineSegment(ball.coo1[0],ball.coo1[1],line)
+    coocol = ClosestPointOnLineSegmentEdgeIndicator(ball.coo1[0],ball.coo1[1],line.coovertex)
     # Distance between object and intersection point
-    distint = sqrt( (coocol[0]-ball.coo1[0])**2 + (coocol[1]-ball.coo1[1])**2 ) # distance between point and fixline
+    #distint = sqrt( (coocol[0]-ball.coo1[0])**2 + (coocol[1]-ball.coo1[1])**2 ) # distance between point and fixline
+    distint = coocol[2]
 
     if distint < ball.r+line.hhalf:
         unitvec_n = divide( array([ ball.coo1[0]-coocol[0] , ball.coo1[1]-coocol[1] , 0 ]) , distint ) # Unit normal vector
         unitvec_t = Rotzvec3_90degcw(unitvec_n) # Unit tangent vector
     
-        coocol_hcomp = add( coocol, multiply( line.hhalf, [ unitvec_n[0], unitvec_n[1] ] ) )
+        coocol_hcomp = add( [coocol[0],coocol[1],0], multiply( line.hhalf, [ unitvec_n[0], unitvec_n[1], 0 ] ) )
 
         Contact_dyn_line(ball,line,coocol_hcomp,unitvec_n,unitvec_t) #FELFELFELFELFELFEL FIXA!!!
 
@@ -566,20 +576,25 @@ def Collision_Line_Line(l1,l2):
 
     if sqrt( (l1.coo0[0]-l2.coo0[0])**2 + (l1.coo0[1]-l2.coo0[1])**2 ) <= (l1.r + l2.r):
 
-        coocol_l1A = ClosestPointOnLineSegmentEdgeIndicator(l1.coovertex[0],l1.coovertex[1],l2,l2.coovertex)
-        coocol_l1B = ClosestPointOnLineSegmentEdgeIndicator(l1.coovertex[2],l1.coovertex[3],l2,l2.coovertex)
-        coocol_l2A = ClosestPointOnLineSegmentEdgeIndicator(l2.coovertex[0],l2.coovertex[1],l1,l1.coovertex)
-        coocol_l2B = ClosestPointOnLineSegmentEdgeIndicator(l2.coovertex[2],l2.coovertex[3],l1,l1.coovertex)
-        distint_l1A = sqrt( (coocol_l1A[0]-l1.coovertex[0])**2 + (coocol_l1A[1]-l1.coovertex[1])**2 )
-        distint_l1B = sqrt( (coocol_l1B[0]-l1.coovertex[2])**2 + (coocol_l1B[1]-l1.coovertex[3])**2 )
-        distint_l2A = sqrt( (coocol_l2A[0]-l2.coovertex[0])**2 + (coocol_l2A[1]-l2.coovertex[1])**2 )
-        distint_l2B = sqrt( (coocol_l2B[0]-l2.coovertex[2])**2 + (coocol_l2B[1]-l2.coovertex[3])**2 )
+        coocol_l1A = ClosestPointOnLineSegmentEdgeIndicator(l1.coovertex[0],l1.coovertex[1],l2.coovertex)
+        coocol_l1B = ClosestPointOnLineSegmentEdgeIndicator(l1.coovertex[2],l1.coovertex[3],l2.coovertex)
+        coocol_l2A = ClosestPointOnLineSegmentEdgeIndicator(l2.coovertex[0],l2.coovertex[1],l1.coovertex)
+        coocol_l2B = ClosestPointOnLineSegmentEdgeIndicator(l2.coovertex[2],l2.coovertex[3],l1.coovertex)
+        distint_l1A = coocol_l1A[2]
+        distint_l1B = coocol_l1B[2]
+        distint_l2A = coocol_l2A[2]
+        distint_l2B = coocol_l2B[2]
 
-        if distint_l1A <= r_pinball and coocol_l1A[2]==0:
+        #distint_l1A = sqrt( (coocol_l1A[0]-l1.coovertex[0])**2 + (coocol_l1A[1]-l1.coovertex[1])**2 )
+        #distint_l1B = sqrt( (coocol_l1B[0]-l1.coovertex[2])**2 + (coocol_l1B[1]-l1.coovertex[3])**2 )
+        #distint_l2A = sqrt( (coocol_l2A[0]-l2.coovertex[0])**2 + (coocol_l2A[1]-l2.coovertex[1])**2 )
+        #distint_l2B = sqrt( (coocol_l2B[0]-l2.coovertex[2])**2 + (coocol_l2B[1]-l2.coovertex[3])**2 )
+
+        if distint_l1A <= r_pinball and coocol_l1A[3]==0:
             unitvec_n = divide( [ l1.coovertex[0] - coocol_l1A[0] , l1.coovertex[1] - coocol_l1A[1] , 0 ] , distint_l1A ) # pekar alltid mot linje 1
             unitvec_t = Rotzvec3_90degcw(unitvec_n)
 
-            coocol_hcomp = add( coocol_l1A, multiply( l2.hhalf, unitvec_n ) )
+            coocol_hcomp = add( [coocol_l1A[0],coocol_l1A[1],0], multiply( l2.hhalf, unitvec_n ) )
 
             Contact_line_line(l1,l2,coocol_hcomp,unitvec_n,unitvec_t)
     
@@ -596,11 +611,11 @@ def Collision_Line_Line(l1,l2):
             l2.coom1 = subtract( l2.coom1 , multiply(l2.m/(l1.m+l2.m)*pendist, [unitvec_n[0],unitvec_n[1]] ))
             l2.coovertex = subtract( l2.coovertex , multiply(l2.m/(l1.m+l2.m)*pendist, [unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1]] ))
 
-        if distint_l1B <= r_pinball and coocol_l1B[2]==0:
+        if distint_l1B <= r_pinball and coocol_l1B[3]==0:
             unitvec_n = divide( [ l1.coovertex[2] - coocol_l1B[0] , l1.coovertex[3] - coocol_l1B[1] , 0 ] , distint_l1B ) # pekar alltid mot linje 1
             unitvec_t = Rotzvec3_90degcw(unitvec_n)
 
-            coocol_hcomp = add( coocol_l1B, multiply( l2.hhalf, unitvec_n ) )
+            coocol_hcomp = add( [coocol_l1B[0],coocol_l1B[1],0], multiply( l2.hhalf, unitvec_n ) )
 
             Contact_line_line(l1,l2,coocol_hcomp,unitvec_n,unitvec_t)
         
@@ -617,11 +632,11 @@ def Collision_Line_Line(l1,l2):
             l2.coom1 = subtract( l2.coom1 , multiply(l2.m/(l1.m+l2.m)*pendist, [unitvec_n[0],unitvec_n[1]] ))
             l2.coovertex = subtract( l2.coovertex , multiply(l2.m/(l1.m+l2.m)*pendist, [unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1]] ))
         
-        if distint_l2A <= r_pinball and coocol_l2A[2]==0:
+        if distint_l2A <= r_pinball and coocol_l2A[3]==0:
             unitvec_n = divide( [ coocol_l2A[0] - l2.coovertex[0] , coocol_l2A[1] - l2.coovertex[1] , 0 ] , distint_l2A ) # pekar alltid mot linje 1
             unitvec_t = Rotzvec3_90degcw(unitvec_n)
 
-            coocol_hcomp = subtract( coocol_l2A, multiply( l1.hhalf, unitvec_n ) )
+            coocol_hcomp = subtract( [coocol_l2A[0],coocol_l2A[1],0], multiply( l1.hhalf, unitvec_n ) )
             
             Contact_line_line(l1,l2,coocol_hcomp,unitvec_n,unitvec_t)
 
@@ -638,11 +653,11 @@ def Collision_Line_Line(l1,l2):
             l2.coom1 = subtract( l2.coom1 , multiply(l2.m/(l1.m+l2.m)*pendist, [unitvec_n[0],unitvec_n[1]] ))
             l2.coovertex = subtract( l2.coovertex , multiply(l2.m/(l1.m+l2.m)*pendist, [unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1]] ))
 
-        if distint_l2B <= r_pinball and coocol_l2B[2]==0:
+        if distint_l2B <= r_pinball and coocol_l2B[3]==0:
             unitvec_n = divide( [ coocol_l2B[0] - l2.coovertex[2] , coocol_l2B[1] - l2.coovertex[3] , 0 ] , distint_l2B ) # pekar alltid mot linje 1
             unitvec_t = Rotzvec3_90degcw(unitvec_n)
 
-            coocol_hcomp = subtract( coocol_l2B, multiply( l1.hhalf, unitvec_n ) )
+            coocol_hcomp = subtract( [coocol_l2B[0],coocol_l2B[1],0], multiply( l1.hhalf, unitvec_n ) )
 
             Contact_line_line(l1,l2,coocol_hcomp,unitvec_n,unitvec_t)
             
@@ -668,25 +683,29 @@ def Collision_Line_FixedLine(line,fl):
 
     if sqrt( (line.coo0[0]-fl.coo0[0])**2 + (line.coo0[1]-fl.coo0[1])**2 ) <= (line.r + fl.r):
 
-        coocol_lineA = ClosestPointOnLineSegmentEdgeIndicator(line.coovertex[0],line.coovertex[1],fl,fl.coovertex)
-        coocol_lineB = ClosestPointOnLineSegmentEdgeIndicator(line.coovertex[2],line.coovertex[3],fl,fl.coovertex)
-        coocol_flA = ClosestPointOnLineSegmentEdgeIndicator(fl.coovertex[0],fl.coovertex[1],line,line.coovertex)
-        coocol_flB = ClosestPointOnLineSegmentEdgeIndicator(fl.coovertex[2],fl.coovertex[3],line,line.coovertex)
-        distint_lineA = sqrt( (coocol_lineA[0]-line.coovertex[0])**2 + (coocol_lineA[1]-line.coovertex[1])**2 )
-        distint_lineB = sqrt( (coocol_lineB[0]-line.coovertex[2])**2 + (coocol_lineB[1]-line.coovertex[3])**2 )
-        distint_flA = sqrt( (coocol_flA[0]-fl.coovertex[0])**2 + (coocol_flA[1]-fl.coovertex[1])**2 )
-        distint_flB = sqrt( (coocol_flB[0]-fl.coovertex[2])**2 + (coocol_flB[1]-fl.coovertex[3])**2 )
+        coocol_lineA = ClosestPointOnLineSegmentEdgeIndicator(line.coovertex[0],line.coovertex[1],fl.coovertex)
+        coocol_lineB = ClosestPointOnLineSegmentEdgeIndicator(line.coovertex[2],line.coovertex[3],fl.coovertex)
+        coocol_flA = ClosestPointOnLineSegmentEdgeIndicator(fl.coovertex[0],fl.coovertex[1],line.coovertex)
+        coocol_flB = ClosestPointOnLineSegmentEdgeIndicator(fl.coovertex[2],fl.coovertex[3],line.coovertex)
+        distint_lineA = coocol_lineA[2]
+        distint_lineB = coocol_lineB[2]
+        distint_flA = coocol_flA[2]
+        distint_flB = coocol_flB[2]
+        #distint_lineA = sqrt( (coocol_lineA[0]-line.coovertex[0])**2 + (coocol_lineA[1]-line.coovertex[1])**2 )
+        #distint_lineB = sqrt( (coocol_lineB[0]-line.coovertex[2])**2 + (coocol_lineB[1]-line.coovertex[3])**2 )
+        #distint_flA = sqrt( (coocol_flA[0]-fl.coovertex[0])**2 + (coocol_flA[1]-fl.coovertex[1])**2 )
+        #distint_flB = sqrt( (coocol_flB[0]-fl.coovertex[2])**2 + (coocol_flB[1]-fl.coovertex[3])**2 )
 
         viz.append( canvas_1.create_line(coocol_lineA[0],coocol_lineA[1],line.coovertex[0],line.coovertex[1],fill="green") )
         viz.append( canvas_1.create_line(coocol_lineB[0],coocol_lineB[1],line.coovertex[2],line.coovertex[3],fill="green") )
         viz.append( canvas_1.create_line(coocol_flA[0],coocol_flA[1],fl.coovertex[0],fl.coovertex[1],fill="green") )
         viz.append( canvas_1.create_line(coocol_flB[0],coocol_flB[1],fl.coovertex[2],fl.coovertex[3],fill="green") )
 
-        if distint_lineA <= r_pinball and coocol_lineA[2]==0:
+        if distint_lineA <= r_pinball and coocol_lineA[3]==0:
             unitvec_n = divide( [ line.coovertex[0] - coocol_lineA[0] , line.coovertex[1] - coocol_lineA[1] , 0 ] , distint_lineA )
             unitvec_t = Rotzvec3_90degcw(unitvec_n)
 
-            coocol_hcomp = add( coocol_lineA, multiply( fl.hhalf, unitvec_n ) )
+            coocol_hcomp = add( [coocol_lineA[0],coocol_lineA[1],0], multiply( fl.hhalf, unitvec_n ) )
 
             Contact_dyn_statline(line,fl,coocol_hcomp,unitvec_n,unitvec_t)
     
@@ -700,11 +719,11 @@ def Collision_Line_FixedLine(line,fl):
             #colcounter = colcounter + 1
             #print(str(colcounter)+" - lineA - "+str(coocol_lineA[2]))
     
-        if distint_lineB <= r_pinball and coocol_lineB[2]==0:
+        if distint_lineB <= r_pinball and coocol_lineB[3]==0:
             unitvec_n = divide( [ line.coovertex[2] - coocol_lineB[0] , line.coovertex[3] - coocol_lineB[1] , 0 ] , distint_lineB )
             unitvec_t = Rotzvec3_90degcw(unitvec_n)
 
-            coocol_hcomp = add( coocol_lineB, multiply( fl.hhalf, unitvec_n ) )
+            coocol_hcomp = add( [coocol_lineB[0],coocol_lineB[1],0], multiply( fl.hhalf, unitvec_n ) )
 
             Contact_dyn_statline(line,fl,coocol_hcomp,unitvec_n,unitvec_t)
         
@@ -718,11 +737,11 @@ def Collision_Line_FixedLine(line,fl):
             #colcounter = colcounter + 1
             #print(str(colcounter)+" - lineB - "+str(coocol_lineB[2]))
         
-        if distint_flA <= r_pinball and coocol_flA[2]==0:
+        if distint_flA <= r_pinball and coocol_flA[3]==0:
             unitvec_n = divide( [ coocol_flA[0] - fl.coovertex[0] , coocol_flA[1] - fl.coovertex[1] , 0 ] , distint_flA )
             unitvec_t = Rotzvec3_90degcw(unitvec_n)
 
-            coocol_hcomp = subtract( coocol_flA, multiply( line.hhalf, unitvec_n ) )
+            coocol_hcomp = subtract( [coocol_flA[0],coocol_flA[1],0], multiply( line.hhalf, unitvec_n ) )
             
             Contact_dyn_statline(line,fl,coocol_hcomp,unitvec_n,unitvec_t)
 
@@ -736,11 +755,11 @@ def Collision_Line_FixedLine(line,fl):
             #colcounter = colcounter + 1
             #print(str(colcounter)+" - flA - "+str(coocol_flA[2]))
     
-        if distint_flB <= r_pinball and coocol_flB[2]==0:
+        if distint_flB <= r_pinball and coocol_flB[3]==0:
             unitvec_n = divide( [ coocol_flB[0] - fl.coovertex[2] , coocol_flB[1] - fl.coovertex[3] , 0 ] , distint_flB )
             unitvec_t = Rotzvec3_90degcw(unitvec_n)
 
-            coocol_hcomp = subtract( coocol_flB, multiply( line.hhalf, unitvec_n ) )
+            coocol_hcomp = subtract( [coocol_flB[0],coocol_flB[1],0], multiply( line.hhalf, unitvec_n ) )
 
             Contact_dyn_statline(line,fl,coocol_hcomp,unitvec_n,unitvec_t)
             
@@ -763,7 +782,7 @@ def Collision_Box_FixedLine(box,fl):
     r_pinball = fl.hhalf
     fac = 1
 
-    global colcounter
+    #global colcounter
 
     if sqrt( (box.coo0[0]-fl.coo0[0])**2 + (box.coo0[1]-fl.coo0[1])**2 ) <= (box.r + fl.r):
 
@@ -772,27 +791,32 @@ def Collision_Box_FixedLine(box,fl):
         for i in range(0,len(indices)):
             line_active = [box.coovertex[ indices[i][0] ],box.coovertex[ indices[i][1] ],box.coovertex[ indices[i][2] ],box.coovertex[ indices[i][3] ]]
 
-            coocol_flA = ClosestPointOnLineSegmentEdgeIndicator(fl.coovertex[0],fl.coovertex[1],box,line_active)
-            coocol_flB = ClosestPointOnLineSegmentEdgeIndicator(fl.coovertex[2],fl.coovertex[3],box,line_active)
-            distint_flA = sqrt( (coocol_flA[0]-fl.coovertex[0])**2 + (coocol_flA[1]-fl.coovertex[1])**2 )
-            distint_flB = sqrt( (coocol_flB[0]-fl.coovertex[2])**2 + (coocol_flB[1]-fl.coovertex[3])**2 )
+            coocol_flA = ClosestPointOnLineSegmentEdgeIndicator(fl.coovertex[0],fl.coovertex[1],line_active)
+            coocol_flB = ClosestPointOnLineSegmentEdgeIndicator(fl.coovertex[2],fl.coovertex[3],line_active)
+            #distint_flA = sqrt( (coocol_flA[0]-fl.coovertex[0])**2 + (coocol_flA[1]-fl.coovertex[1])**2 )
+            #distint_flB = sqrt( (coocol_flB[0]-fl.coovertex[2])**2 + (coocol_flB[1]-fl.coovertex[3])**2 )
 
-            coocol_boxA = ClosestPointOnLineSegmentEdgeIndicator(line_active[0],line_active[1],fl,fl.coovertex)
-            coocol_boxB = ClosestPointOnLineSegmentEdgeIndicator(line_active[2],line_active[3],fl,fl.coovertex)
-            distint_boxA = sqrt( (coocol_boxA[0]-line_active[0])**2 + (coocol_boxA[1]-line_active[1])**2 )
-            distint_boxB = sqrt( (coocol_boxB[0]-line_active[2])**2 + (coocol_boxB[1]-line_active[3])**2 )
+            distint_flA = coocol_flA[2]
+            distint_flB = coocol_flB[2]
+
+            coocol_boxA = ClosestPointOnLineSegmentEdgeIndicator(line_active[0],line_active[1],fl.coovertex)
+            coocol_boxB = ClosestPointOnLineSegmentEdgeIndicator(line_active[2],line_active[3],fl.coovertex)
+            #distint_boxA = sqrt( (coocol_boxA[0]-line_active[0])**2 + (coocol_boxA[1]-line_active[1])**2 )
+            #distint_boxB = sqrt( (coocol_boxB[0]-line_active[2])**2 + (coocol_boxB[1]-line_active[3])**2 )
             
+            distint_boxA = coocol_boxA[2]
+            distint_boxB = coocol_boxB[2]
 
             viz.append( canvas_1.create_line(coocol_boxA[0],coocol_boxA[1],line_active[0],line_active[1],fill="green") )
             viz.append( canvas_1.create_line(coocol_boxB[0],coocol_boxB[1],line_active[2],line_active[3],fill="green") )
             viz.append( canvas_1.create_line(coocol_flA[0],coocol_flA[1],fl.coovertex[0],fl.coovertex[1],fill="green") )
             viz.append( canvas_1.create_line(coocol_flB[0],coocol_flB[1],fl.coovertex[2],fl.coovertex[3],fill="green") )
 
-            if distint_boxA <= r_pinball and coocol_boxA[2]==0:
+            if distint_boxA <= r_pinball and coocol_boxA[3]==0:
                 unitvec_n = divide( [ line_active[0] - coocol_boxA[0] , line_active[1] - coocol_boxA[1] , 0 ] , distint_boxA )
                 unitvec_t = Rotzvec3_90degcw(unitvec_n)
 
-                coocol_hcomp = add( coocol_boxA, multiply( fl.hhalf, unitvec_n ) )
+                coocol_hcomp = add( [coocol_boxA[0],coocol_boxA[1],0], multiply( fl.hhalf, unitvec_n ) )
 
                 Contact_dyn_statline(box,fl,coocol_hcomp,unitvec_n,unitvec_t)
         
@@ -803,14 +827,14 @@ def Collision_Box_FixedLine(box,fl):
                 #box.cooB = box.cooB + multiply([unitvec_n[0],unitvec_n[1]],fac*(r_pinball-distint_boxA))
                 box.coovertex = box.coovertex + multiply([unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1]],fac*(r_pinball-distint_boxA))
 
-                colcounter = colcounter + 1
-                print(str(colcounter)+" - boxline "+str(i)+", edge A, indicator "+str(coocol_boxA[2]))
+                #colcounter = colcounter + 1
+                #print(str(colcounter)+" - boxline "+str(i)+", edge A, indicator "+str(coocol_boxA[3]))
             '''
             if distint_boxB <= r_pinball and coocol_boxB[2]==0:
                 unitvec_n = divide( [ line_active[2] - coocol_boxB[0] , line_active[3] - coocol_boxB[1] , 0 ] , distint_boxB )
                 unitvec_t = Rotzvec3_90degcw(unitvec_n)
 
-                coocol_hcomp = add( coocol_boxB, multiply( fl.hhalf, unitvec_n ) )
+                coocol_hcomp = add( [coocol_boxB[0],coocol_boxB[1],0], multiply( fl.hhalf, unitvec_n ) )
 
                 Contact_dyn_statline(box,fl,coocol_hcomp,unitvec_n,unitvec_t)
             
@@ -821,10 +845,10 @@ def Collision_Box_FixedLine(box,fl):
                 #box.cooB = box.cooB + multiply([unitvec_n[0],unitvec_n[1]],fac*(r_pinball-distint_boxB))
                 box.coovertex = box.coovertex + multiply([unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1]],fac*(r_pinball-distint_boxB))
 
-                colcounter = colcounter + 1
-                print(str(colcounter)+" - boxline "+str(i)+", edge B, indicator "+str(coocol_boxB[2]))
+                #colcounter = colcounter + 1
+                #print(str(colcounter)+" - boxline "+str(i)+", edge B, indicator "+str(coocol_boxB[3]))
             '''
-            if distint_flA <= r_pinball and coocol_flA[2]==0:
+            if distint_flA <= r_pinball and coocol_flA[3]==0:
                 unitvec_n = divide( [ coocol_flA[0] - fl.coovertex[0] , coocol_flA[1] - fl.coovertex[1] , 0 ] , distint_flA )
                 unitvec_t = Rotzvec3_90degcw(unitvec_n)
 
@@ -837,10 +861,10 @@ def Collision_Box_FixedLine(box,fl):
                 #box.cooB = box.cooB + multiply([unitvec_n[0],unitvec_n[1]],fac*(r_pinball-distint_flA))
                 box.coovertex = box.coovertex + multiply([unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1]],fac*(r_pinball-distint_flA))
 
-                colcounter = colcounter + 1
-                print(str(colcounter)+" - flA - "+str(coocol_flA[2]))
+                #colcounter = colcounter + 1
+                #print(str(colcounter)+" - flA - "+str(coocol_flA[3]))
         
-            if distint_flB <= r_pinball and coocol_flB[2]==0:
+            if distint_flB <= r_pinball and coocol_flB[3]==0:
                 unitvec_n = divide( [ coocol_flB[0] - fl.coovertex[2] , coocol_flB[1] - fl.coovertex[3] , 0 ] , distint_flB )
                 unitvec_t = Rotzvec3_90degcw(unitvec_n)
 
@@ -853,8 +877,8 @@ def Collision_Box_FixedLine(box,fl):
                 #box.cooB = box.cooB + multiply([unitvec_n[0],unitvec_n[1]],fac*(r_pinball-distint_flB))
                 box.coovertex = box.coovertex + multiply([unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1]],fac*(r_pinball-distint_flB))
 
-                colcounter = colcounter + 1
-                print(str(colcounter)+" - flB - "+str(coocol_flB[2]))
+                #colcounter = colcounter + 1
+                #print(str(colcounter)+" - flB - "+str(coocol_flB[3]))
                 
             #if obj[10] is fl:
             #    #print(coocol_boxA)
@@ -1131,7 +1155,7 @@ class Object_Box:
         self.theta1 = 0
         self.theta0 = -0.01
         self.thetam1 = self.theta1
-        self.coovertexloc = [ -0.5*w , -0.5*h , 0.5*w , -0.5*h , 0.5*w , 0.5*h , -0.5*w , 0.5*h ]
+        self.coovertexloc = [ -0.8*w , -0.5*h , 0.2*w , -0.5*h , 0.2*w , 0.5*h , -0.8*w , 0.5*h ]
         self.coovertexlocrot = Rotxypairsinvec(self.coovertexloc,self.theta1)
         self.coovertex = [ self.coo1[0]+self.coovertexlocrot[0] , self.coo1[1]+self.coovertexlocrot[1] , self.coo1[0]+self.coovertexlocrot[2] , self.coo1[1]+self.coovertexlocrot[3] , self.coo1[0]+self.coovertexlocrot[4] , self.coo1[1]+self.coovertexlocrot[5] , self.coo1[0]+self.coovertexlocrot[6] , self.coo1[1]+self.coovertexlocrot[7] ]
         self.r = sqrt( (self.coovertexloc[0])**2 + (self.coovertexloc[1])**2 )
@@ -1230,7 +1254,6 @@ class Object_Box:
         self.coo1 = [ 2*self.coo0[0] - self.coom1[0] + (self.F_other[0]/self.m)*dt**2 , 2*self.coo0[1] - self.coom1[1] + (self.F_other[1]/self.m)*dt**2 ]
         self.theta1 = 2*self.theta0 - self.thetam1 + (self.tau_other/self.I)*dt**2
         #self.coo1 = [ self.coo1[0], self.coo1[1], self.coo1[0]-0.5*self.w, self.coo1[1]-0.5*self.h, self.coo1[0]+0.5*self.w, self.coo1[1]-0.5*self.h, self.coo1[0]+0.5*self.w, self.coo1[1]+0.5*self.h, self.coo1[0]-0.5*self.w, self.coo1[1]+0.5*self.h ]
-        self.coovertexloc = [ -0.5*self.w , -0.5*self.h , 0.5*self.w , -0.5*self.h , 0.5*self.w , 0.5*self.h , -0.5*self.w , 0.5*self.h ]
         self.coovertexlocrot = Rotxypairsinvec(self.coovertexloc,self.theta1)
         self.coovertex = [ self.coo1[0]+self.coovertexlocrot[0] , self.coo1[1]+self.coovertexlocrot[1] , self.coo1[0]+self.coovertexlocrot[2] , self.coo1[1]+self.coovertexlocrot[3] , self.coo1[0]+self.coovertexlocrot[4] , self.coo1[1]+self.coovertexlocrot[5] , self.coo1[0]+self.coovertexlocrot[6] , self.coo1[1]+self.coovertexlocrot[7] ]
         '''
@@ -1266,6 +1289,7 @@ class Object_FixedLine:
         self.F_R = array([0.0, 0.0])
         self.cooA = [xA, yA]
         self.cooB = [xB, yB]
+        self.coovertex = [ xA, yA, xB, yB ]
         self.coo0 = [(xA+xB)/2, (yA+yB)/2]
         # Bättre att beräkna dessa en gång, istället för varje gång under kontaktsökningen
         #self.coomax = [ max(self.cooA[0],self.cooB[0]) , max(self.cooA[1],self.cooB[1]) ]
@@ -1596,7 +1620,7 @@ obj.append(Object_Trace(canvas_1,obj[5],10,20))
 obj.append(Object_FixedPoint(canvas_1,400,400))
 obj.append(Object_Ball(canvas_1,400,450,14,rho_rubber,0.5,0.6))
 
-obj.append(Object_Box(canvas_1,600,350,70,30,50,rho_rubber,0.5,0.1))
+obj.append(Object_Box(canvas_1,600,50,70,30,50,rho_rubber,0.5,0.1))
 
 # spring cube
 con.append(Constraint_SpringDamper(obj[0],obj[1],100,1000000,500000))
@@ -1676,9 +1700,9 @@ canvas_1.bind('<Motion>', motion)
 #Testkommentar för githubcommit
 
 ## ATT GÖRA:
+# impleentera en colcounter för line2line mm. där endast 2 st punkter testas - sedan return, för att möjligtvis slippa 2 extra if-påståenden
 # Lägg till undantag för om edge indicator = 1 när två linjer möter varandra, kant mot kant. har glömt göra det.
 # Ha alla vertices for ett object i x- och y-listor, istället för som separata variabler. Bör ge snyggare kod och förenkla collision- och contact-funktionerna. En enda sådan funktion för alla fall?
-# Box kan bara ha två kontaktpunkter med en linje. Använd en colcounter eller liknande?
 # Fixa luftmotståndspilarnas riktning som pekar mest 90 grader isär pga anv av tanh på F_D:s komposanter
 # Skapa allmän apply force-funktion som går att använda på vilken punkt som helst på vilket objekt som helst
 # Skapa mediemotstånd (luftmotstånd etc.) för rotation
