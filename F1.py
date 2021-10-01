@@ -574,7 +574,7 @@ def Collision_Line_Line(l1,l2):
     r_pinball = l1.hhalf + l2.hhalf
     fac = 1
 
-    if sqrt( (l1.coo0[0]-l2.coo0[0])**2 + (l1.coo0[1]-l2.coo0[1])**2 ) <= (l1.r + l2.r):
+    if sqrt( (l1.coo0[0]-l2.coo0[0])**2 + (l1.coo0[1]-l2.coo0[1])**2 ) <= (l1.r + l2.r + r_pinball):
 
         coocol_l1A = ClosestPointOnLineSegmentEdgeIndicator(l1.coovertex[0],l1.coovertex[1],l2.coovertex)
         coocol_l1B = ClosestPointOnLineSegmentEdgeIndicator(l1.coovertex[2],l1.coovertex[3],l2.coovertex)
@@ -585,10 +585,20 @@ def Collision_Line_Line(l1,l2):
         distint_l2A = coocol_l2A[2]
         distint_l2B = coocol_l2B[2]
 
+        viz.append( canvas_1.create_line(coocol_l1A[0],coocol_l1A[1],coocol_l2A[0],coocol_l2A[1],fill="red") )
+        viz.append( canvas_1.create_line(coocol_l1A[0],coocol_l1A[1],coocol_l2B[0],coocol_l2B[1],fill="green") )
+        viz.append( canvas_1.create_line(coocol_l1B[0],coocol_l1B[1],coocol_l2A[0],coocol_l2A[1],fill="blue") )
+        viz.append( canvas_1.create_line(coocol_l1B[0],coocol_l1B[1],coocol_l2B[0],coocol_l2B[1],fill="purple") )
+
         #distint_l1A = sqrt( (coocol_l1A[0]-l1.coovertex[0])**2 + (coocol_l1A[1]-l1.coovertex[1])**2 )
         #distint_l1B = sqrt( (coocol_l1B[0]-l1.coovertex[2])**2 + (coocol_l1B[1]-l1.coovertex[3])**2 )
         #distint_l2A = sqrt( (coocol_l2A[0]-l2.coovertex[0])**2 + (coocol_l2A[1]-l2.coovertex[1])**2 )
         #distint_l2B = sqrt( (coocol_l2B[0]-l2.coovertex[2])**2 + (coocol_l2B[1]-l2.coovertex[3])**2 )
+        
+        #print(l2)
+        #print(obj[38])
+        #if l2 == obj[38]:
+        #    print(1)
 
         if distint_l1A <= r_pinball and coocol_l1A[3]==0:
             unitvec_n = divide( [ l1.coovertex[0] - coocol_l1A[0] , l1.coovertex[1] - coocol_l1A[1] , 0 ] , distint_l1A ) # pekar alltid mot linje 1
@@ -681,7 +691,7 @@ def Collision_Line_FixedLine(line,fl):
 
     #global colcounter
 
-    if sqrt( (line.coo0[0]-fl.coo0[0])**2 + (line.coo0[1]-fl.coo0[1])**2 ) <= (line.r + fl.r):
+    if sqrt( (line.coo0[0]-fl.coo0[0])**2 + (line.coo0[1]-fl.coo0[1])**2 ) <= (line.r + fl.r + r_pinball):
 
         coocol_lineA = ClosestPointOnLineSegmentEdgeIndicator(line.coovertex[0],line.coovertex[1],fl.coovertex)
         coocol_lineB = ClosestPointOnLineSegmentEdgeIndicator(line.coovertex[2],line.coovertex[3],fl.coovertex)
@@ -784,7 +794,7 @@ def Collision_Box_FixedLine(box,fl):
 
     #global colcounter
 
-    if sqrt( (box.coo0[0]-fl.coo0[0])**2 + (box.coo0[1]-fl.coo0[1])**2 ) <= (box.r + fl.r):
+    if sqrt( (box.coo0[0]-fl.coo0[0])**2 + (box.coo0[1]-fl.coo0[1])**2 ) <= (box.r + fl.r + r_pinball):
 
         indices = [ [0,1,2,3] , [2,3,4,5] , [4,5,6,7] , [6,7,0,1] ]
 
