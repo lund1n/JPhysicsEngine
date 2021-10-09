@@ -263,10 +263,14 @@ def Check_CollisionType(o1,o2):
             return
         if isinstance(o2, Object_Line):
             Collision_Ball_Line(o1,o2)
+            return
         #if obj[4] is o1:
         #if 1 == 1:
         if isinstance(o2, Object_FixedLine):
             Collision_Ball_FixedLine(o1,o2)
+            return
+        if isinstance(o2, Object_Box):
+            Collision_Box_Ball(o2,o1)
             return
 
     if isinstance(o1, Object_FixedLine):
@@ -283,10 +287,13 @@ def Check_CollisionType(o1,o2):
     if isinstance(o1, Object_Line):
         if isinstance(o2, Object_FixedLine):
             Collision_Line_FixedLine(o1,o2)
+            return
         if isinstance(o2, Object_Ball):
             Collision_Ball_Line(o2,o1)
+            return
         if isinstance(o2, Object_Line):
             Collision_Line_Line(o2,o1)
+            return
         if isinstance(o2, Object_Box):
             Collision_Box_Line(o2,o1)
             return
@@ -294,11 +301,14 @@ def Check_CollisionType(o1,o2):
     if isinstance(o1, Object_Box):
         if isinstance(o2, Object_FixedLine):
             Collision_Box_FixedLine(o1,o2)
+            return
         if isinstance(o2, Object_Line):
             Collision_Box_Line(o1,o2)
             return
+        if isinstance(o2, Object_Ball):
+            Collision_Box_Ball(o1,o2)
+            return
         
-
 def Contact_line_line(o1,o2,coocol,unitvec_n,unitvec_t):
 
     rcol_b1 = [coocol[0]-o1.coo1[0],coocol[1]-o1.coo1[1],0]
@@ -828,31 +838,29 @@ def Collision_Line_FixedLine(line,fl):
         #    #print(coocol_lineA)
         #    Dp.moveto( coocol_lineA[0],coocol_lineA[1] )
 
-def Collision_Box_Ball(box,ball): #WORK ON THIS
+def Collision_Box_Ball(box,ball):
     
     r_pinball = ball.r
 
-    if sqrt( (box.coo0[0]-ball.coo0[0])**2 + (box.coo0[1]-ball.coo0[1])**2 ) <= (box.r + ball.r + r_pinball):
+    if sqrt( (box.coo0[0]-ball.coo0[0])**2 + (box.coo0[1]-ball.coo0[1])**2 ) <= (box.r + ball.r):
 
         indices = [ [0,1,2,3] , [2,3,4,5] , [4,5,6,7] , [6,7,0,1] ]
 
         for i in range(0,len(indices)):
-            ball_active = [box.coovertex[ indices[i][0] ],box.coovertex[ indices[i][1] ],box.coovertex[ indices[i][2] ],box.coovertex[ indices[i][3] ]]
+            line_active = [box.coovertex[ indices[i][0] ],box.coovertex[ indices[i][1] ],box.coovertex[ indices[i][2] ],box.coovertex[ indices[i][3] ]]
 
-            coocol_ball = ClosestPointOnballSegmentEdgeIndicator(ball.coovertex[0],ball.coovertex[1],ball_active)
+            coocol_ball = ClosestPointOnLineSegmentEdgeIndicator(ball.coo1[0],ball.coo1[1],line_active)
             distint_ball = coocol_ball[2]
 
-            if debug_col_balls==1:
-                viz.append( canvas_1.create_ball(coocol_ball[0],coocol_ball[1],ball.coovertex[0],ball.coovertex[1],fill="green") )
-
-
             if distint_ball <= r_pinball and coocol_ball[3]==0:
-                unitvec_n = divide( [ coocol_ball[0] - ball.coovertex[0] , coocol_ball[1] - ball.coovertex[1] , 0 ] , distint_ball )
+                unitvec_n = divide( array([ ball.coo1[0]-coocol_ball[0] , ball.coo1[1]-coocol_ball[1] , 0 ]) , distint_ball ) # Unit normal vector
+                #unitvec_n = divide( [ line_active[0] - coocol_ball[0] , line_active[1] - coocol_ball[1] , 0 ] , distint_ball )
+                #unitvec_n = ( [ Safediv(coocol_ball[0] - box.coovertex[0] , distint_ball) , Safediv(coocol_ball[1] - box.coovertex[1] , distint_ball) , 0 ] )
                 unitvec_t = Rotzvec3_90degcw(unitvec_n)
 
-                Contact_dyn_ball(box,ball,coocol_ball,unitvec_n,unitvec_t)
+                Contact_dyn_line(box,ball,coocol_ball,unitvec_n,unitvec_t)
 
-                pendist = (r_pinball-distint_ball)
+                pendist = (distint_ball-r_pinball)
                 box.coo1 = add( box.coo1 , multiply(box.m/(box.m+ball.m)*pendist,[unitvec_n[0],unitvec_n[1]]) )
                 box.coo0 = add( box.coo0 , multiply(box.m/(box.m+ball.m)*pendist,[unitvec_n[0],unitvec_n[1]]) )
                 box.coom1 = add( box.coom1 , multiply(box.m/(box.m+ball.m)*pendist,[unitvec_n[0],unitvec_n[1]]) )
@@ -861,7 +869,6 @@ def Collision_Box_Ball(box,ball): #WORK ON THIS
                 ball.coo1 = subtract( ball.coo1 , multiply(ball.m/(box.m+ball.m)*pendist, [unitvec_n[0],unitvec_n[1]] ))
                 ball.coo0 = subtract( ball.coo0 , multiply(ball.m/(box.m+ball.m)*pendist, [unitvec_n[0],unitvec_n[1]] ))
                 ball.coom1 = subtract( ball.coom1 , multiply(ball.m/(box.m+ball.m)*pendist, [unitvec_n[0],unitvec_n[1]] ))
-                ball.coovertex = subtract( ball.coovertex , multiply(ball.m/(box.m+ball.m)*pendist, [unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1]] ))
 
 def Collision_Box_Line(box,line):
     
@@ -1050,7 +1057,6 @@ def Collision_Box_FixedLine(box,fl):
             #if obj[10] is fl:
             #    #print(coocol_boxA)
             #    Dp.moveto( coocol_boxA[0],coocol_boxA[1] )
-
 
 class Constraint_SpringDamper:
     def __init__(self,A,B,len0,k,damping):
@@ -1580,9 +1586,9 @@ class Object_Line:
         self.F_other = [0.0,0.0]
         # Draw
         self.canvas = canvas
-        self.lineAB = canvas.create_line(self.coovertex[0],self.coovertex[1],self.coovertex[2],self.coovertex[3],width=h,fill="grey")
-        self.ballA = canvas.create_oval(self.coovertex[0]-self.hhalf,self.coovertex[1]-self.hhalf,self.coovertex[0]+self.hhalf,self.coovertex[1]+self.hhalf,outline="grey",fill="grey")
-        self.ballB = canvas.create_oval(self.coovertex[2]-self.hhalf,self.coovertex[3]-self.hhalf,self.coovertex[2]+self.hhalf,self.coovertex[3]+self.hhalf,outline="grey",fill="grey")
+        self.lineAB = canvas.create_line(self.coovertex[0],self.coovertex[1],self.coovertex[2],self.coovertex[3],width=h,fill="black")
+        self.ballA = canvas.create_oval(self.coovertex[0]-self.hhalf,self.coovertex[1]-self.hhalf,self.coovertex[0]+self.hhalf,self.coovertex[1]+self.hhalf,outline="black",fill="black")
+        self.ballB = canvas.create_oval(self.coovertex[2]-self.hhalf,self.coovertex[3]-self.hhalf,self.coovertex[2]+self.hhalf,self.coovertex[3]+self.hhalf,outline="black",fill="black")
         
         self.arrow_g = [ sf_farrow1*tanh((self.m*grav[0])/sf_farrow2) , sf_farrow1*tanh((self.m*grav[1])/sf_farrow2) ]
         self.arrow_F_D_form = [ (sf_farrow1*tanh(self.F_D_form[0]/sf_farrow2)) , (sf_farrow1*tanh(self.F_D_form[1]/sf_farrow2)) ]
@@ -1786,7 +1792,7 @@ obj.append(Object_Trace(canvas_1,obj[5],10,20))
 
 #mouse
 obj.append(Object_FixedPoint(canvas_1,400,400))
-obj.append(Object_Ball(canvas_1,400,450,14,rho_rubber,0.5,0.6))
+obj.append(Object_Ball(canvas_1,400,450,14,rho_steel,0.5,0.6))
 
 obj.append(Object_Box(canvas_1,500,300,70,30,50,rho_rubber,0.5,0.1))
 
