@@ -270,7 +270,7 @@ def Check_CollisionType(o1,o2):
             Collision_Ball_FixedLine(o1,o2)
             return
         if isinstance(o2, Object_Box):
-            Collision_Box_Ball(o2,o1)
+            Collision_Ball_Box(o2,o1)
             return
 
     if isinstance(o1, Object_FixedLine):
@@ -306,7 +306,7 @@ def Check_CollisionType(o1,o2):
             Collision_Box_Line(o1,o2)
             return
         if isinstance(o2, Object_Ball):
-            Collision_Box_Ball(o1,o2)
+            Collision_Ball_Box(o1,o2)
             return
         
 def Contact_line_line(o1,o2,coocol,unitvec_n,unitvec_t):
@@ -838,7 +838,7 @@ def Collision_Line_FixedLine(line,fl):
         #    #print(coocol_lineA)
         #    Dp.moveto( coocol_lineA[0],coocol_lineA[1] )
 
-def Collision_Box_Ball(box,ball):
+def Collision_Ball_Box(box,ball):
     
     r_pinball = ball.r
 
@@ -858,7 +858,7 @@ def Collision_Box_Ball(box,ball):
                 #unitvec_n = ( [ Safediv(coocol_ball[0] - box.coovertex[0] , distint_ball) , Safediv(coocol_ball[1] - box.coovertex[1] , distint_ball) , 0 ] )
                 unitvec_t = Rotzvec3_90degcw(unitvec_n)
 
-                Contact_dyn_line(box,ball,coocol_ball,unitvec_n,unitvec_t)
+                Contact_dyn_line(ball,box,coocol_ball,unitvec_n,unitvec_t)
 
                 pendist = (distint_ball-r_pinball)
                 box.coo1 = add( box.coo1 , multiply(box.m/(box.m+ball.m)*pendist,[unitvec_n[0],unitvec_n[1]]) )
@@ -1882,7 +1882,7 @@ obj.append(Object_Trace(canvas_1,obj[5],10,20))
 obj.append(Object_FixedPoint(canvas_1,400,400))
 obj.append(Object_Ball(canvas_1,400,450,14,rho_steel,0.5,0.6))
 
-obj.append(Object_Box(canvas_1,500,300,70,30,50,rho_rubber,0.5,0.1,0.1,0.1))
+obj.append(Object_Box(canvas_1,500,300,70,30,40,rho_rubber,0.5,0.5,0.1,0.1))
 
 # spring cube
 con.append(Constraint_SpringDamper(obj[0],obj[1],100,1000000,500000))
@@ -1948,7 +1948,7 @@ obj.append(Object_ShowPhysics(canvas_1,obj[36]))
 obj.append(Object_Line(canvas_1,350,500,350,600,3.5,50,rho_rubber,0.5,0.5)) #270,150 | 390,70
 obj.append(Object_Line(canvas_1,355,350,350,450,3.5,50,rho_rubber,0.5,0.5)) #270,150 | 390,70
 
-obj.append(Object_Box(canvas_1,550,250,70,30,50,rho_rubber,0.5,0.1,0.3,-0.4))
+obj.append(Object_Box(canvas_1,550,250,50,40,40,rho_rubber,0.5,0.5,0.3,-0.4))
 
 x_m = 0
 y_m = 0
@@ -1963,6 +1963,8 @@ canvas_1.bind('<Motion>', motion)
 #Testkommentar för githubcommit
 
 ## ATT GÖRA:
+# Det är något skumt med box - line kollisionerna. Ibland går de igenom varandra.
+# Kolla om alla collision_box_... har rätt contact_...
 # Zoomfunktion av planen (STORT):
 #   - Gör om alla ritkommandon så att de är funktioner med skalning inbyggt som kallas
 #   - Lägg till en "måttstock" längst ned på skärmen som skalas med skalningsnivån
