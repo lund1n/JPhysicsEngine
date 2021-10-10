@@ -951,6 +951,85 @@ def Collision_Box_Line(box,line):
                 line.coom1 = subtract( line.coom1 , multiply(line.m/(box.m+line.m)*pendist, [unitvec_n[0],unitvec_n[1]] ))
                 line.coovertex = subtract( line.coovertex , multiply(line.m/(box.m+line.m)*pendist, [unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1]] ))
                 
+def Collision_Box_Box(box1,box2): #WORK HERE
+    
+    r_pinball = line.hhalf
+
+    if sqrt( (box1.coo0[0]-box2.coo0[0])**2 + (box1.coo0[1]-box2.coo0[1])**2 ) <= (box1.r + box2.r):
+
+        indices = [ [0,1,2,3] , [2,3,4,5] , [4,5,6,7] , [6,7,0,1] ]
+
+        for i in range(0,len(indices)):
+            line_active = [box1.coovertex[ indices[i][0] ],box1.coovertex[ indices[i][1] ],box1.coovertex[ indices[i][2] ],box1.coovertex[ indices[i][3] ]]
+
+            coocol_lineA = ClosestPointOnLineSegmentEdgeIndicator(line.coovertex[0],line.coovertex[1],line_active)
+            coocol_lineB = ClosestPointOnLineSegmentEdgeIndicator(line.coovertex[2],line.coovertex[3],line_active)
+            distint_lineA = coocol_lineA[2]
+            distint_lineB = coocol_lineB[2]
+
+            coocol_boxA = ClosestPointOnLineSegmentEdgeIndicator(line_active[0],line_active[1],line.coovertex)
+            coocol_boxB = ClosestPointOnLineSegmentEdgeIndicator(line_active[2],line_active[3],line.coovertex)
+            distint_boxA = coocol_boxA[2]
+            distint_boxB = coocol_boxB[2]
+
+            if debug_col_lines==1:
+                viz.append( canvas_1.create_line(coocol_boxA[0],coocol_boxA[1],line_active[0],line_active[1],fill="green") )
+                viz.append( canvas_1.create_line(coocol_boxB[0],coocol_boxB[1],line_active[2],line_active[3],fill="green") )
+                viz.append( canvas_1.create_line(coocol_lineA[0],coocol_lineA[1],line.coovertex[0],line.coovertex[1],fill="green") )
+                viz.append( canvas_1.create_line(coocol_lineB[0],coocol_lineB[1],line.coovertex[2],line.coovertex[3],fill="green") )
+
+            if distint_boxA <= r_pinball and coocol_boxA[3]==0:
+                unitvec_n = divide( [ line_active[0] - coocol_boxA[0] , line_active[1] - coocol_boxA[1] , 0 ] , distint_boxA )
+                unitvec_t = Rotzvec3_90degcw(unitvec_n)
+
+                Contact_dyn_line(box,line,[coocol_boxA[0],coocol_boxA[1],0],unitvec_n,unitvec_t)
+        
+                pendist = (r_pinball-distint_boxA)
+                box.coo1 = add( box.coo1 , multiply(box.m/(box.m+line.m)*pendist,[unitvec_n[0],unitvec_n[1]]) )
+                box.coo0 = add( box.coo0 , multiply(box.m/(box.m+line.m)*pendist,[unitvec_n[0],unitvec_n[1]]) )
+                box.coom1 = add( box.coom1 , multiply(box.m/(box.m+line.m)*pendist,[unitvec_n[0],unitvec_n[1]]) )
+                box.coovertex = add( box.coovertex , multiply(box.m/(box.m+line.m)*pendist,[unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1]]) )
+
+                line.coo1 = subtract( line.coo1 , multiply(line.m/(box.m+line.m)*pendist, [unitvec_n[0],unitvec_n[1]] ))
+                line.coo0 = subtract( line.coo0 , multiply(line.m/(box.m+line.m)*pendist, [unitvec_n[0],unitvec_n[1]] ))
+                line.coom1 = subtract( line.coom1 , multiply(line.m/(box.m+line.m)*pendist, [unitvec_n[0],unitvec_n[1]] ))
+                line.coovertex = subtract( line.coovertex , multiply(line.m/(box.m+line.m)*pendist, [unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1]] ))
+                
+
+            if distint_lineA <= r_pinball and coocol_lineA[3]==0:
+                unitvec_n = divide( [ coocol_lineA[0] - line.coovertex[0] , coocol_lineA[1] - line.coovertex[1] , 0 ] , distint_lineA )
+                unitvec_t = Rotzvec3_90degcw(unitvec_n)
+
+                Contact_dyn_line(box,line,coocol_lineA,unitvec_n,unitvec_t)
+
+                pendist = (r_pinball-distint_lineA)
+                box.coo1 = add( box.coo1 , multiply(box.m/(box.m+line.m)*pendist,[unitvec_n[0],unitvec_n[1]]) )
+                box.coo0 = add( box.coo0 , multiply(box.m/(box.m+line.m)*pendist,[unitvec_n[0],unitvec_n[1]]) )
+                box.coom1 = add( box.coom1 , multiply(box.m/(box.m+line.m)*pendist,[unitvec_n[0],unitvec_n[1]]) )
+                box.coovertex = add( box.coovertex , multiply(box.m/(box.m+line.m)*pendist,[unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1]]) )
+
+                line.coo1 = subtract( line.coo1 , multiply(line.m/(box.m+line.m)*pendist, [unitvec_n[0],unitvec_n[1]] ))
+                line.coo0 = subtract( line.coo0 , multiply(line.m/(box.m+line.m)*pendist, [unitvec_n[0],unitvec_n[1]] ))
+                line.coom1 = subtract( line.coom1 , multiply(line.m/(box.m+line.m)*pendist, [unitvec_n[0],unitvec_n[1]] ))
+                line.coovertex = subtract( line.coovertex , multiply(line.m/(box.m+line.m)*pendist, [unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1]] ))
+
+            if distint_lineB <= r_pinball and coocol_lineB[3]==0:
+                unitvec_n = divide( [ coocol_lineB[0] - line.coovertex[2] , coocol_lineB[1] - line.coovertex[3] , 0 ] , distint_lineB )
+                unitvec_t = Rotzvec3_90degcw(unitvec_n)
+
+                Contact_dyn_line(box,line,coocol_lineB,unitvec_n,unitvec_t)
+
+                pendist = (r_pinball-distint_lineB)
+                box.coo1 = add( box.coo1 , multiply(box.m/(box.m+line.m)*pendist,[unitvec_n[0],unitvec_n[1]]) )
+                box.coo0 = add( box.coo0 , multiply(box.m/(box.m+line.m)*pendist,[unitvec_n[0],unitvec_n[1]]) )
+                box.coom1 = add( box.coom1 , multiply(box.m/(box.m+line.m)*pendist,[unitvec_n[0],unitvec_n[1]]) )
+                box.coovertex = add( box.coovertex , multiply(box.m/(box.m+line.m)*pendist,[unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1]]) )
+
+                line.coo1 = subtract( line.coo1 , multiply(line.m/(box.m+line.m)*pendist, [unitvec_n[0],unitvec_n[1]] ))
+                line.coo0 = subtract( line.coo0 , multiply(line.m/(box.m+line.m)*pendist, [unitvec_n[0],unitvec_n[1]] ))
+                line.coom1 = subtract( line.coom1 , multiply(line.m/(box.m+line.m)*pendist, [unitvec_n[0],unitvec_n[1]] ))
+                line.coovertex = subtract( line.coovertex , multiply(line.m/(box.m+line.m)*pendist, [unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1]] ))
+                
 def Collision_Box_FixedLine(box,fl):
     
     r_pinball = fl.hhalf
@@ -1310,7 +1389,7 @@ class Object_Ball:
         #self.v0 = [(self.coo1[0] - self.coo0[0])/dt, (self.coo1[1] - self.coo0[1])/dt]
 
 class Object_Box:
-    def __init__(self,canvas,x,y,w,h,t,rho,C_el,C_fric):
+    def __init__(self,canvas,x,y,w,h,t,rho,C_el,C_fric,ecc_u,ecc_v):
         # General
         self.canvas = canvas
         # Geometrical properties
@@ -1329,10 +1408,19 @@ class Object_Box:
         self.theta1 = 0
         self.theta0 = 0
         self.thetam1 = self.theta1
-        self.coovertexloc = [ -0.8*w , -0.5*h , 0.2*w , -0.5*h , 0.2*w , 0.5*h , -0.8*w , 0.5*h ]
+        self.ecc_u = ecc_u
+        self.ecc_v = ecc_v
+        self.coovertexloc = [ -0.5*self.w+self.ecc_u*self.w , -0.5*self.h+self.ecc_v*self.h , 0.5*self.w+self.ecc_u*self.w , -0.5*self.h+self.ecc_v*self.h , 0.5*self.w+self.ecc_u*self.w , 0.5*self.h+self.ecc_v*self.h , -0.5*self.w+self.ecc_u*self.w , 0.5*self.h+self.ecc_v*self.h ]
+        #self.coovertexloc = [ -0.5*w , -0.5*h , 0.5*w , -0.5*h , 0.5*w , 0.5*h , -0.5*w , 0.5*h ]
         self.coovertexlocrot = Rotxypairsinvec(self.coovertexloc,self.theta1)
         self.coovertex = [ self.coo1[0]+self.coovertexlocrot[0] , self.coo1[1]+self.coovertexlocrot[1] , self.coo1[0]+self.coovertexlocrot[2] , self.coo1[1]+self.coovertexlocrot[3] , self.coo1[0]+self.coovertexlocrot[4] , self.coo1[1]+self.coovertexlocrot[5] , self.coo1[0]+self.coovertexlocrot[6] , self.coo1[1]+self.coovertexlocrot[7] ]
-        self.r = sqrt( (self.coovertexloc[0])**2 + (self.coovertexloc[1])**2 )
+
+        com_to_A = sqrt( (self.coovertexloc[0])**2 + (self.coovertexloc[1])**2 )
+        com_to_B = sqrt( (self.coovertexloc[2])**2 + (self.coovertexloc[3])**2 )
+        com_to_C = sqrt( (self.coovertexloc[4])**2 + (self.coovertexloc[5])**2 )
+        com_to_D = sqrt( (self.coovertexloc[6])**2 + (self.coovertexloc[7])**2 )
+
+        self.r = max(com_to_A,com_to_B,com_to_C,com_to_D)
         
         '''
         self.cooAloc = Rotvec2([ -0.5*w , -0.5*h ],self.theta1)
@@ -1794,7 +1882,7 @@ obj.append(Object_Trace(canvas_1,obj[5],10,20))
 obj.append(Object_FixedPoint(canvas_1,400,400))
 obj.append(Object_Ball(canvas_1,400,450,14,rho_steel,0.5,0.6))
 
-obj.append(Object_Box(canvas_1,500,300,70,30,50,rho_rubber,0.5,0.1))
+obj.append(Object_Box(canvas_1,500,300,70,30,50,rho_rubber,0.5,0.1,0.1,0.1))
 
 # spring cube
 con.append(Constraint_SpringDamper(obj[0],obj[1],100,1000000,500000))
@@ -1860,6 +1948,7 @@ obj.append(Object_ShowPhysics(canvas_1,obj[36]))
 obj.append(Object_Line(canvas_1,350,500,350,600,3.5,50,rho_rubber,0.5,0.5)) #270,150 | 390,70
 obj.append(Object_Line(canvas_1,355,350,350,450,3.5,50,rho_rubber,0.5,0.5)) #270,150 | 390,70
 
+obj.append(Object_Box(canvas_1,550,250,70,30,50,rho_rubber,0.5,0.1,0.3,-0.4))
 
 x_m = 0
 y_m = 0
@@ -1874,6 +1963,9 @@ canvas_1.bind('<Motion>', motion)
 #Testkommentar för githubcommit
 
 ## ATT GÖRA:
+# Zoomfunktion av planen (STORT):
+#   - Gör om alla ritkommandon så att de är funktioner med skalning inbyggt som kallas
+#   - Lägg till en "måttstock" längst ned på skärmen som skalas med skalningsnivån
 # Ha alla vertices for ett object i x- och y-listor, istället för som separata variabler. Bör ge snyggare kod och förenkla collision- och contact-funktionerna. En enda sådan funktion för alla fall?
 # Fixa luftmotståndspilarnas riktning som pekar mest 90 grader isär pga anv av tanh på F_D:s komposanter
 # Skapa allmän apply force-funktion som går att använda på vilken punkt som helst på vilket objekt som helst
