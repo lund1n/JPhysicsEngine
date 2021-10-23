@@ -3,6 +3,8 @@ from tkinter import *
 from numpy import *
 import time
 
+from numpy import arcsin
+
 w_cnv = 750
 h_cnv = 750
 
@@ -99,7 +101,7 @@ def Timestep():
     #print( sqrt( (obj[4].coo0[0]-obj[4].coom1[0])**2+(obj[4].coo0[1]-obj[4].coom1[1])**2 ) )
 
     # Loop
-    win_1.after(10,Timestep)
+    win_1.after(5,Timestep)
 
 def Rotvec2(v,ang):
     return array([ cos(ang)*v[0] - sin(ang)*v[1] , sin(ang)*v[0] + cos(ang)*v[1] ])
@@ -135,7 +137,7 @@ def Matmultcol(M,v):
     return [M[0][0]*v[0] , M[1][1]*v[1] , M[2][2]*v[2]]
 
 def Scalarproj_vec3(v,w):
-    return (v[0]*w[0] + v[1]*w[1] + v[2]*w[2])/sqrt(w[0]**2 + w[1]**2 + w[2]**2)
+    return Safediv( (v[0]*w[0] + v[1]*w[1] + v[2]*w[2]) , sqrt(w[0]**2 + w[1]**2 + w[2]**2) )
 
 def Vecproj_vec2(v,w):
     return multiply( Safediv( v[0]*w[0] + v[1]*w[1] , (w[0]**2 + w[1]**2) ) , w )
@@ -224,18 +226,18 @@ def ClosestPointOnLineSegmentEdgeIndicator(px,py,line):
     vecumax = max(vector[0],0)
     vecumin = min(vector[0],0)
 
-    # edge_indicator = point projection perpendicular to vector, outside of vector bounds
-    edge_indicator = 0
+    # p_outside_of_line_edges = point projection perpendicular to vector, outside of vector bounds
+    p_outside_of_line_edges = 0
 
     # check edge cases
     if p[0] < vecumin:
         distint = sqrt( (p[0]-vecumin)**2 + (p[1])**2 )
         p = [vecumin,0]
-        edge_indicator = 1
+        p_outside_of_line_edges = 1
     if p[0] > vecumax:
         distint = sqrt( (p[0]-vecumax)**2 + (p[1])**2 )
         p = [vecumax,0]
-        edge_indicator = 1
+        p_outside_of_line_edges = 1
 
     # project vertically
     p[1] = 0
@@ -246,7 +248,145 @@ def ClosestPointOnLineSegmentEdgeIndicator(px,py,line):
     p = add(p,offset)
 
     #return cooint
-    return [ p[0] , p[1] , distint, edge_indicator ]
+    return [ p[0] , p[1] , distint, p_outside_of_line_edges ]
+
+def ClosestPointOnLineBoundary(px,py,line,gcx,gcy): # WORK HERE
+    '''
+    cooint = [0,0,0]
+    # Distance
+    # Intersection between normal line and main line, where normal line is at its closest point to object
+    # 2 line perpendicular intersection (with exception for line k-value = 0 <-> horizontal line )
+    cooint[0] = (line.k!=0)*Safediv( ( py+Safediv(px,line.k)-line.cooA[1]+line.cooA[0]*line.k ),( line.k+Safediv(1,line.k) ) ) + (line.k==0)*px
+    cooint[2] = (cooint[0]<line.coomin[0]) or (cooint[0]>line.coomax[0]) or (line.cooA[0]==line.cooB[0])*( (py>line.coomax[1]) or (py<line.coomin[1]) )
+    # If the point is outside of the line boundaries, set the x coordinate to the corresponding line endpoint
+    cooint[0] = ( (cooint[0]>=line.coomin[0]) and (cooint[0]<=line.coomax[0]) )*cooint[0] + ( (cooint[0]<line.coomin[0]) )*line.coomin[0] + ( (cooint[0]>line.coomax[0]) )*line.coomax[0]
+    # Set the y value and SPECIAL CASE: (with exception for line endpoint x coordinates being the same <-> vertical line & in that case, check whether the point is inbetween the line endpoint y coordinates)
+    cooint[1] = (line.cooA[0]!=line.cooB[0])*( line.k*(cooint[0]-line.cooA[0])+line.cooA[1] )   +   (line.cooA[0]==line.cooB[0])*(   (py<=line.coomax[1] and py>=line.coomin[1])*py   +   (py>line.coomax[1])*line.coomax[1]   +   (py<line.coomin[1])*line.coomin[1]   ) # intersection x into fixline equation
+    #canvas_1.coords(linecol,cooint[0],cooint[1],point.coo0[0],point.coo0[1])
+    # Return value
+    return cooint
+    '''
+
+
+    theta_obj = arctan( Safediv( line[3]-line[1] , line[2]-line[0] ) )
+    #theta_obj = obj.theta1
+    offset = [ line[0] , line[1] ]
+
+    # remove offset from origin
+    p = subtract([px,py],offset)
+    vector = subtract( [ line[2] , line[3] ],offset)
+    gc = subtract([gcx,gcy],offset)
+
+    # transform from global coordinates x and y, to local coordinates u and v
+    p = Rotvec2(p,-theta_obj)
+    vector = Rotvec2(vector,-theta_obj)
+    gc = Rotvec2(gc,-theta_obj)
+
+    angle = arctan(Safediv( (line[3]-line[1]) , (line[2]-line[0]) ))*180/pi
+
+    distpen = p[1]*sign(gc[1]) # >0 = inside, <0 = outside
+    #if distpen > 0 and (abs(p[1])>abs(gc[1])):
+    #    distpen = -1
+    
+
+    #sign_distint_p_signed = p[1]
+    #sign_int_gc_signed = gc[1]
+    #p_gc_opposing_sides_of_line = 0
+    #if sign_distint_p_signed != sign_int_gc_signed:
+    #    p_gc_opposing_sides_of_line = abs(gc[1])
+    
+    vecumax = max(vector[0],0)
+    vecumin = min(vector[0],0)
+
+    # p_outside_of_line_edges = point projection perpendicular to vector, outside of vector bounds
+    p_outside_of_line_edges = 0
+
+    # check edge cases
+    if p[0] < vecumin:
+        #distint = sqrt( (p[0]-vecumin)**2 + (p[1])**2 )
+        #p = [vecumin,0]
+        #distpen = -2
+        p_outside_of_line_edges = 1
+    if p[0] > vecumax:
+        #distint = sqrt( (p[0]-vecumax)**2 + (p[1])**2 )
+        #p = [vecumax,0]
+        #distpen = -3
+        p_outside_of_line_edges = 1
+    if (sign(p[1]) == sign(gc[1])) and (abs(p[1])>abs(gc[1])):
+        #distpen = -4
+        p_outside_of_line_edges = 1
+    
+
+    kA = gc[1]/(gc[0]-vecumin)
+    mA = gc[1]-kA*gc[0]
+    xlimA = (p[1]-mA)/kA
+    kB = (-gc[1])/(vecumax-gc[0])
+    mB = gc[1]-kB*gc[0]
+    xlimB = (p[1]-mB)/kB
+    #xlimB = p[1]/kB+gc[0]
+    #if p_outside_of_line_edges == 0:
+    
+    unitvec_n = [0,-sign(gc[1])]
+    '''
+    if distpen>0:
+        ofsx = 100
+        ofsy = 500
+        #viz.append( canvas_1.create_rectangle(ofs-100,ofs-100,ofs+100,ofs+100,fill="white") )
+        ( canvas_1.create_line(vecumin+ofsx,ofsy,100+ofsx,ofsy,fill="black",arrow=LAST) ) #x axis
+        ( canvas_1.create_line(vecumin+ofsx,ofsy,vecumin+ofsx,100+ofsy,fill="black",arrow=LAST) ) #y axis
+        
+        ( canvas_1.create_line(vecumin+ofsx,ofsy,vecumax+ofsx,ofsy,fill="red") )
+        ( canvas_1.create_line(vecumax+ofsx,ofsy,vecumax+ofsx,2*gc[1]+ofsy,fill="red") )
+        ( canvas_1.create_line(vecumin+ofsx,ofsy,vecumin+ofsx,2*gc[1]+ofsy,fill="red") )
+        ( canvas_1.create_line(vecumin+ofsx,2*gc[1]+ofsy,vecumax+ofsx,2*gc[1]+ofsy,fill="red") )
+
+        ( canvas_1.create_line(gc[0]+ofsx,gc[1]+ofsy,gc[0]+ofsx,gc[1]+ofsy+unitvec_n[1]*25,fill="grey",arrow=LAST) ) # unitvec_n
+
+        ( canvas_1.create_oval(p[0]-3+ofsx,p[1]-3+ofsy,p[0]+3+ofsx,p[1]+3+ofsy,fill="purple",outline="purple") )
+        #viz.append( canvas_1.create_line(p[0]+ofsx,ofsy,p[0]+ofsx,p[1]+ofsy,fill="purple") )
+        #viz.append( canvas_1.create_oval(p[0]-3+ofsx,-3+ofsy,p[0]+3+ofsx,3+ofsy,fill="red",outline="red") )
+
+        ( canvas_1.create_oval(gc[0]-3+ofsx,gc[1]-3+ofsy,gc[0]+3+ofsx,gc[1]+3+ofsy,fill="orange",outline="orange") )
+        ( canvas_1.create_line(vecumin+ofsx,ofsy,gc[0]+ofsx,gc[1]+ofsy,fill="orange") )
+        ( canvas_1.create_line(gc[0]+ofsx,gc[1]+ofsy,vecumax+ofsx,ofsy,fill="orange") )
+    '''
+    #print(distpen)
+    
+    #if distpen > 0:
+    #    #print(distpen)
+    if distpen > 0 and p[0] < xlimA:
+        #print("px = "+str(p[0])+" < xlimA = "+str(xlimA))
+        #print("py = "+str(p[1]))
+        p_outside_of_line_edges = 1
+    elif distpen > 0 and p[0] > xlimB:
+        #print("px = "+str(p[0])+" > xlimB = "+str(xlimB))
+        #print("py = "+str(p[1]))
+        p_outside_of_line_edges = 1
+    #else:
+    #    print("px = "+str(p[0])+", py = "+str(p[1])+", xlimA = "+str(xlimA)+", xlimB = "+str(xlimB))
+        #print("#################")
+    
+    unitvec_n = Rotvec2(unitvec_n,theta_obj)
+    unitvec_n = [unitvec_n[0],unitvec_n[1],0]
+
+    # project vertically
+    p[1] = 0
+    
+    # transform back
+    p = Rotvec2(p,theta_obj)
+    # add offset from origin
+    p = add(p,offset)
+
+    #if p_outside_of_line_edges == 0:
+    #    if distpen > 0:
+    #        viz.append( canvas_1.create_line(p[0],p[1],px,py,fill="green") )
+    #    if distpen == -4:
+    #        viz.append( canvas_1.create_line(p[0],p[1],px,py,fill="orange",dash = (2,2)) )
+    #else:
+    #    viz.append( canvas_1.create_line(p[0],p[1],px,py,fill="red") )
+
+    #return cooint
+    return [ p[0] , p[1] , distpen, p_outside_of_line_edges ]
 
 def IntersectionPoint_Line_Line(l1,l2):
     cooint = [0,0]
@@ -852,6 +992,42 @@ def Collision_Ball_Box(box,ball):
         for i in range(0,len(indices)):
             boxline_active = [box.coovertex[ indices[i][0] ],box.coovertex[ indices[i][1] ],box.coovertex[ indices[i][2] ],box.coovertex[ indices[i][3] ]]
 
+            #coocol_ball = ClosestPointOnLineSegmentEdgeIndicator(ball.coo1[0],ball.coo1[1],boxline_active)
+            #distint_ball = coocol_ball[2]
+
+            coocol_ball = ClosestPointOnLineBoundary(ball.coo1[0],ball.coo1[1],boxline_active,box.coo_geom_center[0],box.coo_geom_center[1])
+            distpen_ball = coocol_ball[2]
+
+            #if distpen_ball <= r_pinball and coocol_ball[3]==0:
+            if distpen_ball >-r_pinball and coocol_ball[3]==0:
+                unitvec_n = divide( [ coocol_ball[0] - ball.coo1[0] , coocol_ball[1] - ball.coo1[1] , 0 ] , distpen_ball )
+                #unitvec_n = divide( array([ ball.coo1[0]-coocol_ball[0] , ball.coo1[1]-coocol_ball[1] , 0 ]) , distint_ball ) # Unit normal vector
+                unitvec_t = Rotzvec3_90degcw(unitvec_n)
+                print(unitvec_n)
+
+                Contact_dyn_line(ball,box,coocol_ball,unitvec_n,unitvec_t)
+
+                pendist = (distpen_ball+r_pinball)
+                box.coo1 = add( box.coo1 , multiply(box.m/(box.m+ball.m)*pendist,[unitvec_n[0],unitvec_n[1]]) )
+                box.coo0 = add( box.coo0 , multiply(box.m/(box.m+ball.m)*pendist,[unitvec_n[0],unitvec_n[1]]) )
+                box.coom1 = add( box.coom1 , multiply(box.m/(box.m+ball.m)*pendist,[unitvec_n[0],unitvec_n[1]]) )
+                box.coovertex = add( box.coovertex , multiply(box.m/(box.m+ball.m)*pendist,[unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1]]) )
+
+                ball.coo1 = subtract( ball.coo1 , multiply(ball.m/(box.m+ball.m)*pendist, [unitvec_n[0],unitvec_n[1]] ))
+                ball.coo0 = subtract( ball.coo0 , multiply(ball.m/(box.m+ball.m)*pendist, [unitvec_n[0],unitvec_n[1]] ))
+                ball.coom1 = subtract( ball.coom1 , multiply(ball.m/(box.m+ball.m)*pendist, [unitvec_n[0],unitvec_n[1]] ))
+
+def Collision_Ball_Box_OLD(box,ball):
+    
+    r_pinball = ball.r
+
+    if sqrt( (box.coo0[0]-ball.coo0[0])**2 + (box.coo0[1]-ball.coo0[1])**2 ) <= (box.r + ball.r):
+
+        indices = [ [0,1,2,3] , [2,3,4,5] , [4,5,6,7] , [6,7,0,1] ]
+
+        for i in range(0,len(indices)):
+            boxline_active = [box.coovertex[ indices[i][0] ],box.coovertex[ indices[i][1] ],box.coovertex[ indices[i][2] ],box.coovertex[ indices[i][3] ]]
+
             coocol_ball = ClosestPointOnLineSegmentEdgeIndicator(ball.coo1[0],ball.coo1[1],boxline_active)
             distint_ball = coocol_ball[2]
 
@@ -954,86 +1130,248 @@ def Collision_Box_Line(box,line):
                 line.coom1 = subtract( line.coom1 , multiply(line.m/(box.m+line.m)*pendist, [unitvec_n[0],unitvec_n[1]] ))
                 line.coovertex = subtract( line.coovertex , multiply(line.m/(box.m+line.m)*pendist, [unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1]] ))
                 
-def Collision_Box_Box(box1,box2): #WORK HERE
+def Collision_Box_Box(box1,box2):
 
-    r_pinball = 1
+    #r_pinball = 1
     
     if sqrt( (box1.coo0[0]-box2.coo0[0])**2 + (box1.coo0[1]-box2.coo0[1])**2 ) <= (box1.r + box2.r):
 
         indices = [ [0,1,2,3] , [2,3,4,5] , [4,5,6,7] , [6,7,0,1] ]
         for j in range(0,len(indices)):
             box2line_active = [box2.coovertex[ indices[j][0] ],box2.coovertex[ indices[j][1] ],box2.coovertex[ indices[j][2] ],box2.coovertex[ indices[j][3] ]]
+            
             for i in range(0,len(indices)):
                 box1line_active = [box1.coovertex[ indices[i][0] ],box1.coovertex[ indices[i][1] ],box1.coovertex[ indices[i][2] ],box1.coovertex[ indices[i][3] ]]
+                
 
-                coocol_box2_lineA = ClosestPointOnLineSegmentEdgeIndicator(box2line_active[0],box2line_active[1],box1line_active)
-                coocol_box2_lineB = ClosestPointOnLineSegmentEdgeIndicator(box2line_active[2],box2line_active[3],box1line_active)
-                distint_box2_lineA = coocol_box2_lineA[2]
-                distint_box2_lineB = coocol_box2_lineB[2]
+                coocol_box2_lineA = ClosestPointOnLineBoundary(box2line_active[0],box2line_active[1],box1line_active,box1.coo_geom_center[0],box1.coo_geom_center[1])
+                coocol_box2_lineB = ClosestPointOnLineBoundary(box2line_active[2],box2line_active[3],box1line_active,box1.coo_geom_center[0],box1.coo_geom_center[1])
+                distpen_box2_lineA = coocol_box2_lineA[2]
+                distpen_box2_lineB = coocol_box2_lineB[2]
 
-                coocol_box1_lineA = ClosestPointOnLineSegmentEdgeIndicator(box1line_active[0],box1line_active[1],box2line_active)
-                coocol_box1_lineB = ClosestPointOnLineSegmentEdgeIndicator(box1line_active[2],box1line_active[3],box2line_active)
-                distint_box1_lineA = coocol_box1_lineA[2]
-                distint_box1_lineB = coocol_box1_lineB[2]
+                coocol_box1_lineA = ClosestPointOnLineBoundary(box1line_active[0],box1line_active[1],box2line_active,box2.coo_geom_center[0],box2.coo_geom_center[1])
+                coocol_box1_lineB = ClosestPointOnLineBoundary(box1line_active[2],box1line_active[3],box2line_active,box2.coo_geom_center[0],box2.coo_geom_center[1])
+                distpen_box1_lineA = coocol_box1_lineA[2]
+                distpen_box1_lineB = coocol_box1_lineB[2]
 
                 if debug_col_lines==1:
-                    viz.append( canvas_1.create_line(coocol_box1_lineA[0],coocol_box1_lineA[1],box1line_active[0],box1line_active[1],fill="green") )
-                    viz.append( canvas_1.create_line(coocol_box1_lineB[0],coocol_box1_lineB[1],box1line_active[2],box1line_active[3],fill="green") )
-                    viz.append( canvas_1.create_line(coocol_box2_lineA[0],coocol_box2_lineA[1],box2line_active[0],box2line_active[1],fill="green") )
-                    viz.append( canvas_1.create_line(coocol_box2_lineB[0],coocol_box2_lineB[1],box2line_active[2],box2line_active[3],fill="green") )
+                    if coocol_box1_lineA[3]==0:
+                        viz.append( canvas_1.create_line(coocol_box1_lineA[0],coocol_box1_lineA[1],box1line_active[0],box1line_active[1],fill="blue") )
+                    else:
+                        viz.append( canvas_1.create_line(coocol_box1_lineA[0],coocol_box1_lineA[1],box1line_active[0],box1line_active[1],fill="red", dash = (3,3)) )
+                    if coocol_box1_lineB[3]==0:
+                        viz.append( canvas_1.create_line(coocol_box1_lineB[0],coocol_box1_lineB[1],box1line_active[2],box1line_active[3],fill="blue") )
+                    else:
+                        viz.append( canvas_1.create_line(coocol_box1_lineB[0],coocol_box1_lineB[1],box1line_active[2],box1line_active[3],fill="red", dash = (3,3)) )
+                    if coocol_box2_lineA[3]==0:
+                        viz.append( canvas_1.create_line(coocol_box2_lineA[0],coocol_box2_lineA[1],box2line_active[0],box2line_active[1],fill="blue") )
+                    else:
+                        viz.append( canvas_1.create_line(coocol_box2_lineA[0],coocol_box2_lineA[1],box2line_active[0],box2line_active[1],fill="red", dash = (3,3)) )
+                    if coocol_box2_lineB[3]==0:
+                        viz.append( canvas_1.create_line(coocol_box2_lineB[0],coocol_box2_lineB[1],box2line_active[2],box2line_active[3],fill="blue") )
+                    else:
+                        viz.append( canvas_1.create_line(coocol_box2_lineB[0],coocol_box2_lineB[1],box2line_active[2],box2line_active[3],fill="red", dash = (3,3)) )
 
-                if distint_box1_lineA <= r_pinball and coocol_box1_lineA[3]==0:
-                    unitvec_n = divide( [ box2line_active[0] - coocol_box1_lineA[0] , box2line_active[1] - coocol_box1_lineA[1] , 0 ] , distint_box1_lineA )
+                #if ((box1line_active[1]/box1line_active[3])>0.95) and ((box1line_active[1]/box1line_active[3])<1.05) or ((box1line_active[3]/box1line_active[1])>0.95) and ((box1line_active[3]/box1line_active[1])<1.05):
+                #        print(1)
+                #if ((box2line_active[1]/box2line_active[3])>0.95) and ((box2line_active[1]/box2line_active[3])<1.05) or ((box2line_active[3]/box2line_active[1])>0.95) and ((box2line_active[3]/box2line_active[1])<1.05):
+                #        print(2)
+                
+                #if box1line_active[1] == box1line_active[3]:
+                #        print(1)
+                #if box2line_active[1] == box2line_active[3]:
+                #        print(2)
+
+                #print(coocol_box1_lineA[4])
+                #print(coocol_box1_lineB[4])
+                #print(coocol_box2_lineA[4])
+                #print(coocol_box2_lineB[4])
+
+                #if distpen_l1A <= r_pinball and (coocol_l1A[3]==0 or lines_edge_to_edge==1):
+                    #unitvec_n = divide( [ l1.coovertex[0] - coocol_l1A[0] , l1.coovertex[1] - coocol_l1A[1] , 0 ] , distpen_l1A ) # pekar alltid mot linje 1
+
+                if distpen_box1_lineA >0 and coocol_box1_lineA[3]==0:
+                    unitvec_n = divide( [ coocol_box1_lineA[0] - box1line_active[0] , coocol_box1_lineA[1] - box1line_active[1] , 0 ] , distpen_box1_lineA )
+                    #unitvec_n = coocol_box1_lineA[4]
+                    print(unitvec_n)
                     unitvec_t = Rotzvec3_90degcw(unitvec_n)
+                    #print(sqrt( (box1line_active[0] - coocol_box1_lineA[0])**2 + (box1line_active[1] - coocol_box1_lineA[1])**2 ))
+                    
+                    ### TESTING
+                    #if ((box1line_active[1]/box1line_active[3])>0.95) and ((box1line_active[1]/box1line_active[3])<1.05) or ((box1line_active[3]/box1line_active[1])>0.95) and ((box1line_active[3]/box1line_active[1])<1.05):
+                    #    print(1)
+                    #if ((box2line_active[1]/box2line_active[3])>0.95) and ((box2line_active[1]/box2line_active[3])<1.05) or ((box2line_active[3]/box2line_active[1])>0.95) and ((box2line_active[3]/box2line_active[1])<1.05):
+                    #    print(2)
+                    
+                    #acoocol_box1_lineA = ClosestPointOnLineBoundary(box1line_active[0],box1line_active[1],box2line_active,box2.coo_geom_center[0],box2.coo_geom_center[1])
+                    #acoocol_box1_lineB = ClosestPointOnLineBoundary(box1line_active[2],box1line_active[3],box2line_active,box2.coo_geom_center[0],box2.coo_geom_center[1])
+                    #acoocol_box2_lineA = ClosestPointOnLineBoundary(box2line_active[0],box2line_active[1],box1line_active,box1.coo_geom_center[0],box1.coo_geom_center[1])
+                    #acoocol_box2_lineB = ClosestPointOnLineBoundary(box2line_active[2],box2line_active[3],box1line_active,box1.coo_geom_center[0],box1.coo_geom_center[1])
+                    
+                    #print("distpen_box1_lineA "+str(distpen_box1_lineA))
+                    #print("unitvec_n: "+str(unitvec_n))
+                    #print(box2line_active[2]-box2line_active[0],box2line_active[3]-box2line_active[1])
+                    #print(box2line_active)
+                    ###
+                    
+                    #print(unitvec_n)
+                    #canvas_1.create_line(box2line_active[0],box2line_active[1],box2line_active[2],box2line_active[3],fill="red")
 
                     Contact_line_line(box1,box2,[coocol_box1_lineA[0],coocol_box1_lineA[1],0],unitvec_n,unitvec_t)
-            
-                    pendist = distint_box1_lineA
+                    
+                    pendist = distpen_box1_lineA
+                    #print("box1 coo1: "+str(box1.coo1))
                     box1.coo1 = add( box1.coo1 , multiply(box1.m/(box1.m+box2.m)*pendist,[unitvec_n[0],unitvec_n[1]]) )
+                    #print("box1 coo1: "+str(box1.coo1))
                     box1.coo0 = add( box1.coo0 , multiply(box1.m/(box1.m+box2.m)*pendist,[unitvec_n[0],unitvec_n[1]]) )
                     box1.coom1 = add( box1.coom1 , multiply(box1.m/(box1.m+box2.m)*pendist,[unitvec_n[0],unitvec_n[1]]) )
                     box1.coovertex = add( box1.coovertex , multiply(box1.m/(box1.m+box2.m)*pendist,[unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1]]) )
 
+                    #print("box2 coo1: "+str(box2.coo1))
                     box2.coo1 = subtract( box2.coo1 , multiply(box2.m/(box2.m+box2.m)*pendist, [unitvec_n[0],unitvec_n[1]] ))
+                    #print("box2 coo1: "+str(box2.coo1))
                     box2.coo0 = subtract( box2.coo0 , multiply(box2.m/(box2.m+box2.m)*pendist, [unitvec_n[0],unitvec_n[1]] ))
                     box2.coom1 = subtract( box2.coom1 , multiply(box2.m/(box2.m+box2.m)*pendist, [unitvec_n[0],unitvec_n[1]] ))
                     box2.coovertex = subtract( box2.coovertex , multiply(box2.m/(box2.m+box2.m)*pendist, [unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1]]))
                     
-
-                if distint_box2_lineA <= r_pinball and coocol_box2_lineA[3]==0:
-                    unitvec_n = divide( [ coocol_box2_lineA[0] - box2line_active[0] , coocol_box2_lineA[1] - box2line_active[1] , 0 ] , distint_box2_lineA )
+                '''
+                ##################################### NEEDED? ###################################
+                if distpen_box1_lineB >0 and coocol_box1_lineB[3]==0:
+                    unitvec_n = divide( [ coocol_box1_lineB[0] - box1line_active[2] , coocol_box1_lineB[1] - box1line_active[3] , 0 ] , distpen_box1_lineB )
+                    #unitvec_n = coocol_box1_lineB[4]
+                    print(unitvec_n)
                     unitvec_t = Rotzvec3_90degcw(unitvec_n)
+                    
+                    ### TESTING
+                    #if ((box1line_active[1]/box1line_active[3])>0.95) and ((box1line_active[1]/box1line_active[3])<1.05) or ((box1line_active[3]/box1line_active[1])>0.95) and ((box1line_active[3]/box1line_active[1])<1.05):
+                    #    print(1)
+                    #if ((box2line_active[1]/box2line_active[3])>0.95) and ((box2line_active[1]/box2line_active[3])<1.05) or ((box2line_active[3]/box2line_active[1])>0.95) and ((box2line_active[3]/box2line_active[1])<1.05):
+                    #    print(2)
+                    
+                    #acoocol_box1_lineA = ClosestPointOnLineBoundary(box1line_active[0],box1line_active[1],box2line_active,box2.coo_geom_center[0],box2.coo_geom_center[1])
+                    #acoocol_box1_lineB = ClosestPointOnLineBoundary(box1line_active[2],box1line_active[3],box2line_active,box2.coo_geom_center[0],box2.coo_geom_center[1])
+                    #acoocol_box2_lineA = ClosestPointOnLineBoundary(box2line_active[0],box2line_active[1],box1line_active,box1.coo_geom_center[0],box1.coo_geom_center[1])
+                    #acoocol_box2_lineB = ClosestPointOnLineBoundary(box2line_active[2],box2line_active[3],box1line_active,box1.coo_geom_center[0],box1.coo_geom_center[1])
+                    
+                    #print("distpen_box1_lineB "+str(distpen_box1_lineB))
+                    #print("unitvec_n: "+str(unitvec_n))
+                    #print(box2line_active[2]-box2line_active[0],box2line_active[3]-box2line_active[1])
+                    #print(box2line_active)
+                    ###
 
-                    Contact_line_line(box1,box2,coocol_box2_lineA,unitvec_n,unitvec_t)
+                    #print(unitvec_n)
+                    #canvas_1.create_line(box2line_active[0],box2line_active[1],box2line_active[2],box2line_active[3],fill="orange",width=4)
+                    #canvas_1.create_line(100,300,400,300,fill="red")
 
-                    pendist = distint_box2_lineA
+                    Contact_line_line(box1,box2,[coocol_box1_lineB[0],coocol_box1_lineB[1],0],unitvec_n,unitvec_t)
+                    
+                    
+                    pendist = distpen_box1_lineB
+                    #print("box1 coo1: "+str(box1.coo1))
                     box1.coo1 = add( box1.coo1 , multiply(box1.m/(box1.m+box2.m)*pendist,[unitvec_n[0],unitvec_n[1]]) )
+                    #print("box1 coo1: "+str(box1.coo1))
                     box1.coo0 = add( box1.coo0 , multiply(box1.m/(box1.m+box2.m)*pendist,[unitvec_n[0],unitvec_n[1]]) )
                     box1.coom1 = add( box1.coom1 , multiply(box1.m/(box1.m+box2.m)*pendist,[unitvec_n[0],unitvec_n[1]]) )
                     box1.coovertex = add( box1.coovertex , multiply(box1.m/(box1.m+box2.m)*pendist,[unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1]]) )
 
+                    #print("box2 coo1: "+str(box2.coo1))
+                    box2.coo1 = subtract( box2.coo1 , multiply(box2.m/(box2.m+box2.m)*pendist, [unitvec_n[0],unitvec_n[1]] ))
+                    #print("box2 coo1: "+str(box2.coo1))
+                    box2.coo0 = subtract( box2.coo0 , multiply(box2.m/(box2.m+box2.m)*pendist, [unitvec_n[0],unitvec_n[1]] ))
+                    box2.coom1 = subtract( box2.coom1 , multiply(box2.m/(box2.m+box2.m)*pendist, [unitvec_n[0],unitvec_n[1]] ))
+                    box2.coovertex = subtract( box2.coovertex , multiply(box2.m/(box2.m+box2.m)*pendist, [unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1]]))
+                '''
+
+                #################################################################################
+                    
+                if distpen_box2_lineA >0 and coocol_box2_lineA[3]==0:
+                    unitvec_n = divide( [ box2line_active[0] - coocol_box2_lineA[0] , box2line_active[1] - coocol_box2_lineA[1] , 0 ] , distpen_box2_lineA )
+                    #unitvec_n = coocol_box2_lineA[4]
+                    print(unitvec_n)
+                    unitvec_t = Rotzvec3_90degcw(unitvec_n)
+                    #print(sqrt( (coocol_box2_lineA[0] - box2line_active[0])**2 + (coocol_box2_lineA[1] - box2line_active[1])**2 ))
+                    
+                    ### TESTING
+                    #if box1line_active[1] == box1line_active[3]:
+                    #    print(1)
+                    #if box2line_active[1] == box2line_active[3]:
+                    #    print(2)
+                    
+                    #acoocol_box1_lineA = ClosestPointOnLineBoundary(box1line_active[0],box1line_active[1],box2line_active,box2.coo_geom_center[0],box2.coo_geom_center[1])
+                    #acoocol_box1_lineB = ClosestPointOnLineBoundary(box1line_active[2],box1line_active[3],box2line_active,box2.coo_geom_center[0],box2.coo_geom_center[1])
+                    #acoocol_box2_lineA = ClosestPointOnLineBoundary(box2line_active[0],box2line_active[1],box1line_active,box1.coo_geom_center[0],box1.coo_geom_center[1])
+                    #acoocol_box2_lineB = ClosestPointOnLineBoundary(box2line_active[2],box2line_active[3],box1line_active,box1.coo_geom_center[0],box1.coo_geom_center[1])
+                    
+                    #coocol_box2_lineA = ClosestPointOnLineBoundary(box2line_active[0],box2line_active[1],box1line_active,box1.coo_geom_center[0],box1.coo_geom_center[1])
+                    #print("distpen_box2_lineA "+str(distpen_box2_lineA))
+                    #print("unitvec_n: "+str(unitvec_n))
+                    #print(box1line_active[2]-box1line_active[0],box1line_active[3]-box1line_active[1])
+                    #print(unitvec_n)
+                    ###
+
+                    Contact_line_line(box1,box2,coocol_box2_lineA,unitvec_n,unitvec_t)
+                    
+                    
+                    pendist = distpen_box2_lineA
+                    #print("box1 coo1: "+str(box1.coo1))
+                    box1.coo1 = add( box1.coo1 , multiply(box1.m/(box1.m+box2.m)*pendist,[unitvec_n[0],unitvec_n[1]]) )
+                    #print("box1 coo1: "+str(box1.coo1))
+                    box1.coo0 = add( box1.coo0 , multiply(box1.m/(box1.m+box2.m)*pendist,[unitvec_n[0],unitvec_n[1]]) )
+                    box1.coom1 = add( box1.coom1 , multiply(box1.m/(box1.m+box2.m)*pendist,[unitvec_n[0],unitvec_n[1]]) )
+                    box1.coovertex = add( box1.coovertex , multiply(box1.m/(box1.m+box2.m)*pendist,[unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1]]) )
+
+                    #print("box2 coo1: "+str(box2.coo1))
                     box2.coo1 = subtract( box2.coo1 , multiply(box2.m/(box1.m+box2.m)*pendist, [unitvec_n[0],unitvec_n[1]] ))
+                    #print("box2 coo1: "+str(box2.coo1))
                     box2.coo0 = subtract( box2.coo0 , multiply(box2.m/(box1.m+box2.m)*pendist, [unitvec_n[0],unitvec_n[1]] ))
                     box2.coom1 = subtract( box2.coom1 , multiply(box2.m/(box1.m+box2.m)*pendist, [unitvec_n[0],unitvec_n[1]] ))
                     box2.coovertex = subtract( box2.coovertex , multiply(box2.m/(box1.m+box2.m)*pendist, [unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1]]))
-
-                if distint_box2_lineB <= r_pinball and coocol_box2_lineB[3]==0:
-                    unitvec_n = divide( [ coocol_box2_lineB[0] - box2line_active[2] , coocol_box2_lineB[1] - box2line_active[3] , 0 ] , distint_box2_lineB )
+                    
+                '''
+                if distpen_box2_lineB >0 and coocol_box2_lineB[3]==0:
+                    unitvec_n = divide( [ box2line_active[2] - coocol_box2_lineB[0] , box2line_active[3] - coocol_box2_lineB[1] , 0 ] , distpen_box2_lineB )
+                    #unitvec_n = coocol_box2_lineB[4]
+                    print(unitvec_n)
                     unitvec_t = Rotzvec3_90degcw(unitvec_n)
+                    #print(sqrt( (coocol_box2_lineB[0] - box2line_active[0])**2 + (coocol_box2_lineB[1] - box2line_active[1])**2 ))
+                    
+                    ### TESTING
+                    #if box1line_active[1] == box1line_active[3]:
+                    #    print(1)
+                    #if box2line_active[1] == box2line_active[3]:
+                    #    print(2)
+                    
+                    #acoocol_box1_lineA = ClosestPointOnLineBoundary(box1line_active[0],box1line_active[1],box2line_active,box2.coo_geom_center[0],box2.coo_geom_center[1])
+                    #acoocol_box1_lineB = ClosestPointOnLineBoundary(box1line_active[2],box1line_active[3],box2line_active,box2.coo_geom_center[0],box2.coo_geom_center[1])
+                    #acoocol_box2_lineA = ClosestPointOnLineBoundary(box2line_active[0],box2line_active[1],box1line_active,box1.coo_geom_center[0],box1.coo_geom_center[1])
+                    #acoocol_box2_lineB = ClosestPointOnLineBoundary(box2line_active[2],box2line_active[3],box1line_active,box1.coo_geom_center[0],box1.coo_geom_center[1])
+                    
+                    #coocol_box2_lineB = ClosestPointOnLineBoundary(box2line_active[2],box2line_active[3],box1line_active,box1.coo_geom_center[0],box1.coo_geom_center[1])
+                    #print("distpen_box2_lineB "+str(distpen_box2_lineB))
+                    #print("unitvec_n: "+str(unitvec_n))
+                    #print(box1line_active[2]-box1line_active[0],box1line_active[3]-box1line_active[1])
+                    #print(unitvec_n)
+                    ###
 
                     Contact_line_line(box1,box2,coocol_box2_lineB,unitvec_n,unitvec_t)
-
-                    pendist = distint_box2_lineB
+                    
+                    
+                    pendist = distpen_box2_lineB
+                    #print("box1 coo1: "+str(box1.coo1))
                     box1.coo1 = add( box1.coo1 , multiply(box1.m/(box1.m+box2.m)*pendist,[unitvec_n[0],unitvec_n[1]]) )
+                    #print("box1 coo1: "+str(box1.coo1))
                     box1.coo0 = add( box1.coo0 , multiply(box1.m/(box1.m+box2.m)*pendist,[unitvec_n[0],unitvec_n[1]]) )
                     box1.coom1 = add( box1.coom1 , multiply(box1.m/(box1.m+box2.m)*pendist,[unitvec_n[0],unitvec_n[1]]) )
                     box1.coovertex = add( box1.coovertex , multiply(box1.m/(box1.m+box2.m)*pendist,[unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1]]) )
 
+                    #print("box2 coo1: "+str(box2.coo1))
                     box2.coo1 = subtract( box2.coo1 , multiply(box2.m/(box1.m+box2.m)*pendist, [unitvec_n[0],unitvec_n[1]] ))
+                    #print("box2 coo1: "+str(box2.coo1))
                     box2.coo0 = subtract( box2.coo0 , multiply(box2.m/(box1.m+box2.m)*pendist, [unitvec_n[0],unitvec_n[1]] ))
                     box2.coom1 = subtract( box2.coom1 , multiply(box2.m/(box1.m+box2.m)*pendist, [unitvec_n[0],unitvec_n[1]] ))
                     box2.coovertex = subtract( box2.coovertex , multiply(box2.m/(box1.m+box2.m)*pendist, [unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1]] ))
-                
+                '''
+
 def Collision_Box_FixedLine(box,fl):
     
     r_pinball = fl.hhalf
@@ -1425,6 +1763,8 @@ class Object_Box:
         com_to_D = sqrt( (self.coovertexloc[6])**2 + (self.coovertexloc[7])**2 )
 
         self.r = max(com_to_A,com_to_B,com_to_C,com_to_D)
+
+        self.coo_geom_center = ( (self.coovertex[0]+self.coovertex[2]+self.coovertex[4]+self.coovertex[6])/4 , (self.coovertex[1]+self.coovertex[3]+self.coovertex[5]+self.coovertex[7])/4 )
         
         '''
         self.cooAloc = Rotvec2([ -0.5*w , -0.5*h ],self.theta1)
@@ -1522,6 +1862,8 @@ class Object_Box:
         #self.coo1 = [ self.coo1[0], self.coo1[1], self.coo1[0]-0.5*self.w, self.coo1[1]-0.5*self.h, self.coo1[0]+0.5*self.w, self.coo1[1]-0.5*self.h, self.coo1[0]+0.5*self.w, self.coo1[1]+0.5*self.h, self.coo1[0]-0.5*self.w, self.coo1[1]+0.5*self.h ]
         self.coovertexlocrot = Rotxypairsinvec(self.coovertexloc,self.theta1)
         self.coovertex = [ self.coo1[0]+self.coovertexlocrot[0] , self.coo1[1]+self.coovertexlocrot[1] , self.coo1[0]+self.coovertexlocrot[2] , self.coo1[1]+self.coovertexlocrot[3] , self.coo1[0]+self.coovertexlocrot[4] , self.coo1[1]+self.coovertexlocrot[5] , self.coo1[0]+self.coovertexlocrot[6] , self.coo1[1]+self.coovertexlocrot[7] ]
+        
+        self.coo_geom_center = ( (self.coovertex[0]+self.coovertex[2]+self.coovertex[4]+self.coovertex[6])/4 , (self.coovertex[1]+self.coovertex[3]+self.coovertex[5]+self.coovertex[7])/4 )
         '''
         self.cooA = add( self.coo1, self.cooAloc )
         self.cooB = add( self.coo1, self.cooBloc )
@@ -1886,7 +2228,7 @@ obj.append(Object_Trace(canvas_1,obj[5],10,20))
 obj.append(Object_FixedPoint(canvas_1,400,400))
 obj.append(Object_Ball(canvas_1,400,450,14,rho_steel,0.5,0.6))
 
-obj.append(Object_Box(canvas_1,500,300,70,30,40,rho_rubber,0.5,0.5,0.1,0.1))
+obj.append(Object_Box(canvas_1,550,450,70,30,40,rho_rubber,0.5,0.5,0.1,0.1))
 
 # spring cube
 con.append(Constraint_SpringDamper(obj[0],obj[1],100,1000000,500000))
@@ -1905,7 +2247,7 @@ con.append(Constraint_SpringDamper(obj[9],obj[6],125,1000000,1000000))
 
 # To mouse
 #con.append(Constraint_SpringDamper(obj[14],obj[15],0,10000000,1000000))
-con.append(Constraint_Distance(obj[14],obj[15],50))
+con.append(Constraint_Distance(obj[14],obj[15],10))
 
 # Rope
 obj.append(Object_FixedPoint(canvas_1,650,50))
@@ -1952,7 +2294,7 @@ obj.append(Object_ShowPhysics(canvas_1,obj[36]))
 obj.append(Object_Line(canvas_1,350,500,350,600,3.5,50,rho_rubber,0.5,0.5)) #270,150 | 390,70
 obj.append(Object_Line(canvas_1,355,350,350,450,3.5,50,rho_rubber,0.5,0.5)) #270,150 | 390,70
 
-obj.append(Object_Box(canvas_1,500,250,50,40,40,rho_rubber,0.5,0.5,0.3,-0.2))
+obj.append(Object_Box(canvas_1,540,400,50,40,40,rho_rubber,0.5,0.5,0.2,-0.3))
 
 x_m = 0
 y_m = 0
