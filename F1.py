@@ -996,10 +996,10 @@ def Collision_Ball_Box(box,ball):
             #distint_ball = coocol_ball[2]
 
             coocol_ball = ClosestPointOnLineBoundary(ball.coo1[0],ball.coo1[1],boxline_active,box.coo_geom_center[0],box.coo_geom_center[1])
-            distpen_ball = coocol_ball[2]
+            distpen_ball = coocol_ball[2]+ball.r
 
             #if distpen_ball <= r_pinball and coocol_ball[3]==0:
-            if distpen_ball >-r_pinball and coocol_ball[3]==0:
+            if distpen_ball >0 and coocol_ball[3]==0:
                 unitvec_n = divide( [ coocol_ball[0] - ball.coo1[0] , coocol_ball[1] - ball.coo1[1] , 0 ] , distpen_ball )
                 #unitvec_n = divide( array([ ball.coo1[0]-coocol_ball[0] , ball.coo1[1]-coocol_ball[1] , 0 ]) , distint_ball ) # Unit normal vector
                 unitvec_t = Rotzvec3_90degcw(unitvec_n)
@@ -1007,7 +1007,7 @@ def Collision_Ball_Box(box,ball):
 
                 Contact_dyn_line(ball,box,coocol_ball,unitvec_n,unitvec_t)
 
-                pendist = (distpen_ball+r_pinball)
+                pendist = distpen_ball
                 box.coo1 = add( box.coo1 , multiply(box.m/(box.m+ball.m)*pendist,[unitvec_n[0],unitvec_n[1]]) )
                 box.coo0 = add( box.coo0 , multiply(box.m/(box.m+ball.m)*pendist,[unitvec_n[0],unitvec_n[1]]) )
                 box.coom1 = add( box.coom1 , multiply(box.m/(box.m+ball.m)*pendist,[unitvec_n[0],unitvec_n[1]]) )
