@@ -40,7 +40,7 @@ obj = []
 con = []
 viz_sf = 40
 viz_sf2 = 1000000
-sf_farrow1 = 200
+sf_farrow1 = 100
 sf_farrow2 = 100000000
 viz = []
 
@@ -250,7 +250,7 @@ def ClosestPointOnLineSegmentEdgeIndicator(px,py,line):
     #return cooint
     return [ p[0] , p[1] , distint, p_outside_of_line_edges ]
 
-def ClosestPointOnLineBoundary(px,py,line,gcx,gcy): # WORK HERE
+def ClosestPointOnLineBoundary(px,py,line,gcx,gcy,t): # WORK HERE
     '''
     cooint = [0,0,0]
     # Distance
@@ -284,10 +284,11 @@ def ClosestPointOnLineBoundary(px,py,line,gcx,gcy): # WORK HERE
 
     angle = arctan(Safediv( (line[3]-line[1]) , (line[2]-line[0]) ))*180/pi
 
-    distpen = p[1]*sign(gc[1]) # >0 = inside, <0 = outside
+    distpen = p[1]*sign(gc[1])+t # >0 = inside, <0 = outside
     #if distpen > 0 and (abs(p[1])>abs(gc[1])):
     #    distpen = -1
-    
+
+    dist_dyngc_int = abs(p[1])
 
     #sign_distint_p_signed = p[1]
     #sign_int_gc_signed = gc[1]
@@ -326,7 +327,7 @@ def ClosestPointOnLineBoundary(px,py,line,gcx,gcy): # WORK HERE
     #xlimB = p[1]/kB+gc[0]
     #if p_outside_of_line_edges == 0:
     
-    unitvec_n = [0,-sign(gc[1])]
+    #unitvec_n = [0,-sign(gc[1])]
     '''
     if distpen>0:
         ofsx = 100
@@ -354,11 +355,11 @@ def ClosestPointOnLineBoundary(px,py,line,gcx,gcy): # WORK HERE
     
     #if distpen > 0:
     #    #print(distpen)
-    if distpen > 0 and p[0] < xlimA:
+    if distpen > 0 and (p[0]) < xlimA:
         #print("px = "+str(p[0])+" < xlimA = "+str(xlimA))
         #print("py = "+str(p[1]))
         p_outside_of_line_edges = 1
-    elif distpen > 0 and p[0] > xlimB:
+    elif distpen > 0 and (p[0]) > xlimB:
         #print("px = "+str(p[0])+" > xlimB = "+str(xlimB))
         #print("py = "+str(p[1]))
         p_outside_of_line_edges = 1
@@ -366,11 +367,11 @@ def ClosestPointOnLineBoundary(px,py,line,gcx,gcy): # WORK HERE
     #    print("px = "+str(p[0])+", py = "+str(p[1])+", xlimA = "+str(xlimA)+", xlimB = "+str(xlimB))
         #print("#################")
     
-    unitvec_n = Rotvec2(unitvec_n,theta_obj)
-    unitvec_n = [unitvec_n[0],unitvec_n[1],0]
+    #unitvec_n = Rotvec2(unitvec_n,theta_obj)
+    #unitvec_n = [unitvec_n[0],unitvec_n[1],0]
 
     # project vertically
-    p[1] = 0
+    p[1] = 0 #- sign(gc[1])*t
     
     # transform back
     p = Rotvec2(p,theta_obj)
@@ -386,7 +387,10 @@ def ClosestPointOnLineBoundary(px,py,line,gcx,gcy): # WORK HERE
     #    viz.append( canvas_1.create_line(p[0],p[1],px,py,fill="red") )
 
     #return cooint
-    return [ p[0] , p[1] , distpen, p_outside_of_line_edges ]
+
+    #testdist = sqrt( (px-p[0])**2 + (py-p[1])**2)
+
+    return [ p[0] , p[1] , distpen, p_outside_of_line_edges, dist_dyngc_int ]
 
 def IntersectionPoint_Line_Line(l1,l2):
     cooint = [0,0]
@@ -995,16 +999,26 @@ def Collision_Ball_Box(box,ball):
             #coocol_ball = ClosestPointOnLineSegmentEdgeIndicator(ball.coo1[0],ball.coo1[1],boxline_active)
             #distint_ball = coocol_ball[2]
 
-            coocol_ball = ClosestPointOnLineBoundary(ball.coo1[0],ball.coo1[1],boxline_active,box.coo_geom_center[0],box.coo_geom_center[1])
+            coocol_ball = ClosestPointOnLineBoundary(ball.coo1[0],ball.coo1[1],boxline_active,box.coo_geom_center[0],box.coo_geom_center[1],ball.r)
             distpen_ball = coocol_ball[2]
+            dist_ballgc_int = coocol_ball[4]
 
             #if distpen_ball <= r_pinball and coocol_ball[3]==0:
-            if distpen_ball >0 and coocol_ball[3]==0:
-                unitvec_n = divide( [ coocol_ball[0] - ball.coo1[0] , coocol_ball[1] - ball.coo1[1] , 0 ] , distpen_ball )
+            if (distpen_ball) > 0 and coocol_ball[3]==0:
+                #unitvec_n = divide( [ coocol_ball[0] - ball.coo1[0] , coocol_ball[1] - ball.coo1[1] , 0 ] , dist_ballgc_int )
+                unitvec_n = divide( [ ball.coo1[0] - coocol_ball[0] , ball.coo1[1] - coocol_ball[1] , 0 ] , dist_ballgc_int )
+                #unitvec_n = divide( [ coocol_ball[0] - ball.coo1[0] , coocol_ball[1] - ball.coo1[1] , 0 ] , sqrt( (coocol_ball[0] - ball.coo1[0])**2 + (coocol_ball[1] - ball.coo1[1])**2) )
+
                 #unitvec_n = divide( [ ball.coo1[0] - coocol_ball[0] , ball.coo1[1] - coocol_ball[1] , 0 ] , distpen_ball )
                 #unitvec_n = divide( array([ ball.coo1[0]-coocol_ball[0] , ball.coo1[1]-coocol_ball[1] , 0 ]) , distint_ball ) # Unit normal vector
                 unitvec_t = Rotzvec3_90degcw(unitvec_n)
-                print(unitvec_n)
+                #print(unitvec_n)
+                #print( sqrt( (unitvec_n[0])**2 + (unitvec_n[1])**2 ) )
+                #print( sqrt( (coocol_ball[0] - ball.coo1[0])**2 + (coocol_ball[1] - ball.coo1[1])**2 ) )
+                #print([ coocol_ball[0] - ball.coo1[0] , coocol_ball[1] - ball.coo1[1] , 0 ])
+                #print(distpen_ball)
+                
+                #canvas_1.create_oval(coocol_ball[0]-3,coocol_ball[1]-3,coocol_ball[0]+3,coocol_ball[1]+3,fill="blue",outline="blue")
 
                 Contact_dyn_line(ball,box,coocol_ball,unitvec_n,unitvec_t)
 
@@ -1145,13 +1159,13 @@ def Collision_Box_Box(box1,box2):
                 box1line_active = [box1.coovertex[ indices[i][0] ],box1.coovertex[ indices[i][1] ],box1.coovertex[ indices[i][2] ],box1.coovertex[ indices[i][3] ]]
                 
 
-                coocol_box2_lineA = ClosestPointOnLineBoundary(box2line_active[0],box2line_active[1],box1line_active,box1.coo_geom_center[0],box1.coo_geom_center[1])
-                coocol_box2_lineB = ClosestPointOnLineBoundary(box2line_active[2],box2line_active[3],box1line_active,box1.coo_geom_center[0],box1.coo_geom_center[1])
+                coocol_box2_lineA = ClosestPointOnLineBoundary(box2line_active[0],box2line_active[1],box1line_active,box1.coo_geom_center[0],box1.coo_geom_center[1],0)
+                coocol_box2_lineB = ClosestPointOnLineBoundary(box2line_active[2],box2line_active[3],box1line_active,box1.coo_geom_center[0],box1.coo_geom_center[1],0)
                 distpen_box2_lineA = coocol_box2_lineA[2]
                 distpen_box2_lineB = coocol_box2_lineB[2]
 
-                coocol_box1_lineA = ClosestPointOnLineBoundary(box1line_active[0],box1line_active[1],box2line_active,box2.coo_geom_center[0],box2.coo_geom_center[1])
-                coocol_box1_lineB = ClosestPointOnLineBoundary(box1line_active[2],box1line_active[3],box2line_active,box2.coo_geom_center[0],box2.coo_geom_center[1])
+                coocol_box1_lineA = ClosestPointOnLineBoundary(box1line_active[0],box1line_active[1],box2line_active,box2.coo_geom_center[0],box2.coo_geom_center[1],0)
+                coocol_box1_lineB = ClosestPointOnLineBoundary(box1line_active[2],box1line_active[3],box2line_active,box2.coo_geom_center[0],box2.coo_geom_center[1],0)
                 distpen_box1_lineA = coocol_box1_lineA[2]
                 distpen_box1_lineB = coocol_box1_lineB[2]
 
@@ -1194,7 +1208,7 @@ def Collision_Box_Box(box1,box2):
                 if distpen_box1_lineA >0 and coocol_box1_lineA[3]==0:
                     unitvec_n = divide( [ coocol_box1_lineA[0] - box1line_active[0] , coocol_box1_lineA[1] - box1line_active[1] , 0 ] , distpen_box1_lineA )
                     #unitvec_n = coocol_box1_lineA[4]
-                    print(unitvec_n)
+                    #print(unitvec_n)
                     unitvec_t = Rotzvec3_90degcw(unitvec_n)
                     #print(sqrt( (box1line_active[0] - coocol_box1_lineA[0])**2 + (box1line_active[1] - coocol_box1_lineA[1])**2 ))
                     
@@ -1288,7 +1302,7 @@ def Collision_Box_Box(box1,box2):
                 if distpen_box2_lineA >0 and coocol_box2_lineA[3]==0:
                     unitvec_n = divide( [ box2line_active[0] - coocol_box2_lineA[0] , box2line_active[1] - coocol_box2_lineA[1] , 0 ] , distpen_box2_lineA )
                     #unitvec_n = coocol_box2_lineA[4]
-                    print(unitvec_n)
+                    #print(unitvec_n)
                     unitvec_t = Rotzvec3_90degcw(unitvec_n)
                     #print(sqrt( (coocol_box2_lineA[0] - box2line_active[0])**2 + (coocol_box2_lineA[1] - box2line_active[1])**2 ))
                     
@@ -2310,8 +2324,9 @@ canvas_1.bind('<Motion>', motion)
 #Testkommentar för githubcommit
 
 ## ATT GÖRA:
+# ball to box - ändra så att du räknar ut avstånden till alla ytorna och ta det kortaste, istället för y=kx+m?
+# ball to box - boll mot kant går igenom varandra aningen. ej fixat pga lathet. se om du orkar. ClosestPointOnLineBoundary.
 # Det är något skumt med box - line kollisionerna. Ibland går de igenom varandra.
-# Kolla om alla collision_box_... har rätt contact_...
 # Zoomfunktion av planen (STORT):
 #   - Gör om alla ritkommandon så att de är funktioner med skalning inbyggt som kallas
 #   - Lägg till en "måttstock" längst ned på skärmen som skalas med skalningsnivån
