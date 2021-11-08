@@ -49,7 +49,7 @@ colcounter = 0
 debug_col_lines = 0
 
 t_elapsed = 0
-dt = 0.01
+dt = 0.015
 
 dtr = canvas_1.create_text(10,20,text="dt = "+str(dt),font=("arial",8),anchor=SW)
 t_elapsedr = canvas_1.create_text(10,30,text="t = "+str(round(t_elapsed,9)),font=("arial",8),anchor=SW)
@@ -1248,46 +1248,78 @@ def Collision_Polygon_Polygon(pg1,pg2):
     if sqrt( (pg1.coo0[0]-pg2.coo0[0])**2 + (pg1.coo0[1]-pg2.coo0[1])**2 ) <= (pg1.r + pg2.r):
         intp_pg1 = 0
         intp_pg2 = 0
-        for i in range(int(len(pg1.coovertex)/2)):
+        len_pg1 = len(pg1.coovertex)
+        len_pg1_half = int(len(pg1.coovertex)/2)
+        len_pg2 = len(pg2.coovertex)
+        len_pg2_half = int(len(pg2.coovertex)/2)
+
+        for i in range(len_pg1_half):
             intp_pg1 = intp_pg1 + Pointinsidepolygoncheck([pg1.coovertex[2*i],pg1.coovertex[2*i+1]],pg2.coovertex)
-        for i in range(int(len(pg2.coovertex)/2)):
-            intp_pg2 = intp_pg1 + Pointinsidepolygoncheck([pg2.coovertex[2*i],pg2.coovertex[2*i+1]],pg1.coovertex)
+        for i in range(len_pg2_half):
+            intp_pg2 = intp_pg2 + Pointinsidepolygoncheck([pg2.coovertex[2*i],pg2.coovertex[2*i+1]],pg1.coovertex)
 
-        if intp_pg1 > 0:
-            for i in range(int(len(pg1.coovertex)/2)):
-                
-                point = [pg1.coovertex[2*i],pg1.coovertex[2*i+1]]
+        pg1_unitvec_n = multiply(-1,pg1.normals_local_rotated)
+        pg1_unitvec_t = pg1.tangents_local_rotated
+        pg2_unitvec_n = pg2.normals_local_rotated
+        pg2_unitvec_t = pg2.tangents_local_rotated
 
-                dist_list = [None]*int(len(pg2.coovertex)/2)
-                int_list = [None]*len(pg2.coovertex)
-                ool_list = [None]*int(len(pg2.coovertex)/2)
+        def Contact_o1_o2(o1,o2,n_int,lo1,lo1h,lo2,lo2h,unitvec_n,unitvec_t):
 
-                for j in range(int(len(pg2.coovertex)/2)):
-                    if j == (int(len(pg2.coovertex)/2)-1): # if i is at the last xy-pair in the list
-                        line = [pg2.coovertex[2*j],pg2.coovertex[2*j+1],pg2.coovertex[0],pg2.coovertex[1]]
-                    else: # else, count as usual
-                        line = [pg2.coovertex[2*j],pg2.coovertex[2*j+1],pg2.coovertex[2*j+2],pg2.coovertex[2*j+3]]
+            if n_int > 0:
+                for i in range(lo1h):
                     
-                    line_angle = pg2.angles_local_rotated[j]
+                    point = [o1.coovertex[2*i],o1.coovertex[2*i+1]]
 
-                    cooint = ClosestPointOnLineBoundary2(point[0],point[1],line,line_angle)
-                    dist_list[j] = cooint[2]
-                    int_list[2*j] = cooint[0]
-                    int_list[2*j+1] = cooint[1]
-                    ool_list[j] = cooint[3]
-                    
-                shortest_dist = min(dist_list)
-                shortest_dist_index = dist_list.index(shortest_dist)
-                colpx = int_list[2*shortest_dist_index]
-                colpy = int_list[2*shortest_dist_index+1]
-                if ool_list[shortest_dist_index]==0:
-                    canvas_1.create_oval(colpx-3,colpy-3,colpx+3,colpy+3,fill="green",outline="green")
-                    Contact_line_line(pg1,pg2,[colpx,colpy,0],pg2.normals_local_rotated,pg2.tangents_local_rotated) # WORK HERE
+                    dist_list = [None]*lo2h
+                    int_list = [None]*lo2
+                    ool_list = [None]*lo2h
 
+                    for j in range(lo2h):
+                        if j == (lo2h-1): # if i is at the last xy-pair in the list
+                            line = [o2.coovertex[2*j],o2.coovertex[2*j+1],o2.coovertex[0],o2.coovertex[1]]
+                        else: # else, count as usual
+                            line = [o2.coovertex[2*j],o2.coovertex[2*j+1],o2.coovertex[2*j+2],o2.coovertex[2*j+3]]
+                        
+                        line_angle = o2.angles_local_rotated[j]
 
+                        cooint = ClosestPointOnLineBoundary2(point[0],point[1],line,line_angle)
+                        dist_list[j] = cooint[2]
+                        int_list[2*j] = cooint[0]
+                        int_list[2*j+1] = cooint[1]
+                        ool_list[j] = cooint[3]
+                        
+                    shortest_dist = min(dist_list)
+                    shortest_dist_index = dist_list.index(shortest_dist)
+                    colpx = int_list[2*shortest_dist_index]
+                    colpy = int_list[2*shortest_dist_index+1]
+                    #unitvec_n = o2.normals_local_rotated
+                    #unitvec_t = o2.tangents_local_rotated
+                    if ool_list[shortest_dist_index]==0:
+                        #canvas_1.create_oval(colpx-3,colpy-3,colpx+3,colpy+3,fill="green",outline="green")
+                        Contact_line_line(o1,o2,[colpx,colpy,0],unitvec_n,unitvec_t) # WORK HERE
+
+                        
+                        pendist = shortest_dist
+                        o1_xy_translate = multiply(o1.m/(o1.m+o2.m)*pendist,[unitvec_n[0],unitvec_n[1]])
+                        o2_xy_translate = multiply(o2.m/(o1.m+o2.m)*pendist,[unitvec_n[0],unitvec_n[1]])
+                        o1.coo1 = add( o1.coo1 , o1_xy_translate )
+                        o1.coo0 = add( o1.coo0 , o1_xy_translate )
+                        o1.coom1 = add( o1.coom1 , o1_xy_translate )
+                        for i in range(lo1h):
+                            o1.coovertex[2*i] = add( o1.coovertex[2*i] , o1_xy_translate[0] )
+                            o1.coovertex[2*i+1] = add( o1.coovertex[2*i+1] , o1_xy_translate[1] )
+
+                        o2.coo1 = subtract( o2.coo1 , o2_xy_translate )
+                        o2.coo0 = subtract( o2.coo0 , o2_xy_translate )
+                        o2.coom1 = subtract( o2.coom1 , o2_xy_translate )
+                        for i in range(lo2h):
+                            o2.coovertex[2*i] = subtract( o2.coovertex[2*i] , o2_xy_translate[0] )
+                            o2.coovertex[2*i+1] = subtract( o2.coovertex[2*i+1] , o2_xy_translate[1] )
+                        
         
-            #print(1)
-                    
+        Contact_o1_o2(pg1,pg2,intp_pg1,len_pg1,len_pg1_half,len_pg2,len_pg2_half,pg2_unitvec_n,pg2_unitvec_t)
+        Contact_o1_o2(pg2,pg1,intp_pg2,len_pg2,len_pg2_half,len_pg1,len_pg1_half,pg1_unitvec_n,pg1_unitvec_t)
+
 
 def Collision_Box_Box_OLD(box1,box2):
 
