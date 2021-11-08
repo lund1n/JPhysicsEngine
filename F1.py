@@ -49,7 +49,7 @@ colcounter = 0
 debug_col_lines = 0
 
 t_elapsed = 0
-dt = 0.025
+dt = 0.01
 
 dtr = canvas_1.create_text(10,20,text="dt = "+str(dt),font=("arial",8),anchor=SW)
 t_elapsedr = canvas_1.create_text(10,30,text="t = "+str(round(t_elapsed,9)),font=("arial",8),anchor=SW)
@@ -115,6 +115,9 @@ def Rotxypairsinvec(v,ang):
 
 def Rotvec2_90degcw(v):
     return array([ v[1] , -v[0] ])
+
+def Rotvec2_90degcountercw(v):
+    return array([ -v[1] , v[0] ])
 
 def Rotzvec3_90degcw(v):
     return array([ v[1] , -v[0] , v[2] ])
@@ -282,7 +285,7 @@ def ClosestPointOnLineBoundary(px,py,line,gcx,gcy,t): # WORK HERE
     vector = Rotvec2(vector,-theta_obj)
     gc = Rotvec2(gc,-theta_obj)
 
-    angle = arctan(Safediv( (line[3]-line[1]) , (line[2]-line[0]) ))*180/pi
+    #angle = arctan(Safediv( (line[3]-line[1]) , (line[2]-line[0]) ))*180/pi
 
     distpen = p[1]*sign(gc[1])+t # >0 = inside, <0 = outside
     #if distpen > 0 and (abs(p[1])>abs(gc[1])):
@@ -392,6 +395,101 @@ def ClosestPointOnLineBoundary(px,py,line,gcx,gcy,t): # WORK HERE
 
     return [ p[0] , p[1] , distpen, p_outside_of_line_edges, dist_dyngc_int ]
 
+
+def ClosestPointOnLineBoundary2(px,py,line,angle): # WORK HERE
+    
+    theta_obj = angle
+    #theta_obj = arctan( Safediv( line[3]-line[1] , line[2]-line[0] ) )
+    offset = [ line[0] , line[1] ]
+
+    # remove offset from origin
+    p = subtract([px,py],offset)
+    vector = subtract( [ line[2] , line[3] ],offset)
+
+    # transform from global coordinates x and y, to local coordinates u and v
+    p = Rotvec2(p,-theta_obj)
+    vector = Rotvec2(vector,-theta_obj)
+
+    dist_to_surface = abs(p[1])
+
+    vecumax = max(vector[0],0)
+    vecumin = min(vector[0],0)
+
+    p_outside_of_line_edges = 0
+
+    # check edge cases
+    if p[0] < vecumin:
+        p_outside_of_line_edges = 1
+    if p[0] > vecumax:
+        p_outside_of_line_edges = 1
+        
+    # project vertically
+    p[1] = 0
+    
+    # transform back
+    p = Rotvec2(p,theta_obj)
+    # add offset from origin
+    p = add(p,offset)
+
+    return [ p[0] , p[1] , dist_to_surface, p_outside_of_line_edges ]
+
+
+def Pointinsidepolygoncheck(pointcoo,polygoncoo):
+
+    #inside_or_outside_checklist = (len(polygoncoo)/2)*[0] # create a list entry for every line in the polygon
+    point_inside_polygon = 0
+    ints_h = 0
+    ints_v = 0
+
+    for i in range(int(len(polygoncoo)/2)):
+        if i == (int(len(polygoncoo)/2)-1): # if i is at the last xy-pair in the list
+            line = [polygoncoo[2*i],polygoncoo[2*i+1],polygoncoo[0],polygoncoo[1]]
+        else: # else, count as usual
+            line = [polygoncoo[2*i],polygoncoo[2*i+1],polygoncoo[2*i+2],polygoncoo[2*i+3]]
+
+        line_max_x = max(line[0],line[2])
+        line_min_x = min(line[0],line[2])
+        line_max_y = max(line[1],line[3])
+        line_min_y = min(line[1],line[3])
+
+        if line[1] == line[3]: # is the line horizontal?
+            # raycast upwards
+            if pointcoo[0] >= line_min_x and pointcoo[0] < line_max_x and line[1] < pointcoo[1]:
+                ints_v = ints_v + 1
+
+        elif line[0] == line[2]: # is the line vertical?
+            # raycast to the sides
+            if pointcoo[1] >= line_min_y and pointcoo[1] < line_max_y and line[0] < pointcoo[0]:
+                ints_h = ints_h + 1
+
+        else: # now we can safely check the line which must be sloped
+            k = (line[3]-line[1]) / (line[2]-line[0]) # already determined to not be zero or infinity
+            m = line[1]-k*line[0]
+
+            x_int_h = (pointcoo[1]-m)/k
+            y_int_h = k*x_int_h+m
+            
+            y_int_v = k*pointcoo[0]+m
+            x_int_v = (y_int_v-m)/k
+
+            #canvas_1.coords(p2_draw,x_int_h-3,y_int_h-3,x_int_h+3,y_int_h+3)
+            #canvas_1.coords(p3_draw,x_int_v-3,y_int_v-3,x_int_v+3,y_int_v+3)
+            
+            # raycast upwards
+            if x_int_v >= line_min_x and x_int_v < line_max_x and y_int_v < pointcoo[1]:
+                ints_v = ints_v + 1
+            # raycast to the sides
+            if x_int_h >= line_min_x and x_int_h < line_max_x and x_int_h < pointcoo[0]:
+                ints_h = ints_h + 1
+            
+    if (ints_h%2) != 0 and (ints_v%2) != 0:
+        point_inside_polygon = 1
+        #canvas_1.itemconfigure(p_draw,fill="green",outline="green")
+        #canvas_1.coords(p_draw,x_m-5,y_m-5,x_m+5,y_m+5)
+        #canvas_1.create_oval(x_m-2,y_m-2,x_m+2,y_m+2,fill="black",outline="black")
+        
+    return point_inside_polygon
+
 def IntersectionPoint_Line_Line(l1,l2):
     cooint = [0,0]
     # 2 line intersection
@@ -453,7 +551,7 @@ def Check_CollisionType(o1,o2):
             Collision_Ball_Box(o1,o2)
             return
         if isinstance(o2, Object_Box):
-            Collision_Box_Box(o1,o2)
+            Collision_Polygon_Polygon(o1,o2)
             return
         
 def Contact_line_line(o1,o2,coocol,unitvec_n,unitvec_t):
@@ -500,14 +598,14 @@ def Contact_line_line(o1,o2,coocol,unitvec_n,unitvec_t):
     o2.F_other =  add( o2.F_other , multiply([unitvec_t[0],unitvec_t[1]],F_t) )
 
 
-    # Draw contact point
-    viz.append( canvas_1.create_oval(coocol[0]-3,coocol[1]-3,coocol[0]+3,coocol[1]+3,fill="red",outline="red") )
-    # Draw force arrows
+    # Draw normal arrows
     #viz.append( canvas_1.create_line(coocol[0]-unitvec_n[0]*viz_sf,coocol[1]-unitvec_n[1]*viz_sf,coocol[0]+unitvec_n[0]*viz_sf,coocol[1]+unitvec_n[1]*viz_sf,arrow=BOTH,fill="green") )
     viz.append( canvas_1.create_line(coocol[0]-unitvec_n[0]*sf_farrow1*tanh(abs(F_n)/sf_farrow2),coocol[1]-unitvec_n[1]*sf_farrow1*tanh(abs(F_n)/sf_farrow2),coocol[0]+unitvec_n[0]*sf_farrow1*tanh(abs(F_n)/sf_farrow2),coocol[1]+unitvec_n[1]*sf_farrow1*tanh(abs(F_n)/sf_farrow2),arrow=BOTH,fill="red") )
-    # Draw tang vel arrows
+    # Draw tang arrows
     #viz.append( canvas_1.create_line(coocol[0]-unitvec_t[0]*30,coocol[1]-unitvec_t[1]*30,coocol[0]+unitvec_t[0]*30,coocol[1]+unitvec_t[1]*30,arrow=BOTH,fill="green") )
-    viz.append( canvas_1.create_line(coocol[0]-unitvec_t[0]*sf_farrow1*tanh(abs(F_t)/sf_farrow2),coocol[1]-unitvec_t[1]*sf_farrow1*tanh(abs(F_t)/sf_farrow2),coocol[0]+unitvec_t[0]*sf_farrow1*tanh(abs(F_t)/sf_farrow2),coocol[1]+unitvec_t[1]*sf_farrow1*tanh(abs(F_t)/sf_farrow2),arrow=BOTH,fill="red") )
+    viz.append( canvas_1.create_line(coocol[0]-unitvec_t[0]*sf_farrow1*tanh(abs(F_t)/sf_farrow2),coocol[1]-unitvec_t[1]*sf_farrow1*tanh(abs(F_t)/sf_farrow2),coocol[0]+unitvec_t[0]*sf_farrow1*tanh(abs(F_t)/sf_farrow2),coocol[1]+unitvec_t[1]*sf_farrow1*tanh(abs(F_t)/sf_farrow2),arrow=BOTH,fill="orange") )
+    # Draw contact point
+    viz.append( canvas_1.create_oval(coocol[0]-3,coocol[1]-3,coocol[0]+3,coocol[1]+3,fill="red",outline="red") )
 
 def Contact_dyn_statline(o1,o2,coocol,unitvec_n,unitvec_t):
     rcol_o1 = [coocol[0]-o1.coo1[0],coocol[1]-o1.coo1[1],0]
@@ -1144,8 +1242,54 @@ def Collision_Box_Line(box,line):
                 line.coo0 = subtract( line.coo0 , multiply(line.m/(box.m+line.m)*pendist, [unitvec_n[0],unitvec_n[1]] ))
                 line.coom1 = subtract( line.coom1 , multiply(line.m/(box.m+line.m)*pendist, [unitvec_n[0],unitvec_n[1]] ))
                 line.coovertex = subtract( line.coovertex , multiply(line.m/(box.m+line.m)*pendist, [unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1]] ))
+
+def Collision_Polygon_Polygon(pg1,pg2):
+
+    if sqrt( (pg1.coo0[0]-pg2.coo0[0])**2 + (pg1.coo0[1]-pg2.coo0[1])**2 ) <= (pg1.r + pg2.r):
+        intp_pg1 = 0
+        intp_pg2 = 0
+        for i in range(int(len(pg1.coovertex)/2)):
+            intp_pg1 = intp_pg1 + Pointinsidepolygoncheck([pg1.coovertex[2*i],pg1.coovertex[2*i+1]],pg2.coovertex)
+        for i in range(int(len(pg2.coovertex)/2)):
+            intp_pg2 = intp_pg1 + Pointinsidepolygoncheck([pg2.coovertex[2*i],pg2.coovertex[2*i+1]],pg1.coovertex)
+
+        if intp_pg1 > 0:
+            for i in range(int(len(pg1.coovertex)/2)):
                 
-def Collision_Box_Box(box1,box2):
+                point = [pg1.coovertex[2*i],pg1.coovertex[2*i+1]]
+
+                dist_list = [None]*int(len(pg2.coovertex)/2)
+                int_list = [None]*len(pg2.coovertex)
+                ool_list = [None]*int(len(pg2.coovertex)/2)
+
+                for j in range(int(len(pg2.coovertex)/2)):
+                    if j == (int(len(pg2.coovertex)/2)-1): # if i is at the last xy-pair in the list
+                        line = [pg2.coovertex[2*j],pg2.coovertex[2*j+1],pg2.coovertex[0],pg2.coovertex[1]]
+                    else: # else, count as usual
+                        line = [pg2.coovertex[2*j],pg2.coovertex[2*j+1],pg2.coovertex[2*j+2],pg2.coovertex[2*j+3]]
+                    
+                    line_angle = pg2.angles_local_rotated[j]
+
+                    cooint = ClosestPointOnLineBoundary2(point[0],point[1],line,line_angle)
+                    dist_list[j] = cooint[2]
+                    int_list[2*j] = cooint[0]
+                    int_list[2*j+1] = cooint[1]
+                    ool_list[j] = cooint[3]
+                    
+                shortest_dist = min(dist_list)
+                shortest_dist_index = dist_list.index(shortest_dist)
+                colpx = int_list[2*shortest_dist_index]
+                colpy = int_list[2*shortest_dist_index+1]
+                if ool_list[shortest_dist_index]==0:
+                    canvas_1.create_oval(colpx-3,colpy-3,colpx+3,colpy+3,fill="green",outline="green")
+                    Contact_line_line(pg1,pg2,[colpx,colpy,0],pg2.normals_local_rotated,pg2.tangents_local_rotated) # WORK HERE
+
+
+        
+            #print(1)
+                    
+
+def Collision_Box_Box_OLD(box1,box2):
 
     #r_pinball = 1
     
@@ -1762,8 +1906,8 @@ class Object_Box:
         #self.coo1 = [x,y]
         self.coo0 = self.coo1
         self.coom1 = self.coo1
-        self.theta1 = 0
-        self.theta0 = 0
+        self.theta1 = 0.15
+        self.theta0 = 0.15
         self.thetam1 = self.theta1
         self.ecc_u = ecc_u
         self.ecc_v = ecc_v
@@ -1772,15 +1916,45 @@ class Object_Box:
         self.coovertexlocrot = Rotxypairsinvec(self.coovertexloc,self.theta1)
         self.coovertex = [ self.coo1[0]+self.coovertexlocrot[0] , self.coo1[1]+self.coovertexlocrot[1] , self.coo1[0]+self.coovertexlocrot[2] , self.coo1[1]+self.coovertexlocrot[3] , self.coo1[0]+self.coovertexlocrot[4] , self.coo1[1]+self.coovertexlocrot[5] , self.coo1[0]+self.coovertexlocrot[6] , self.coo1[1]+self.coovertexlocrot[7] ]
 
+        # calculate point furthest away from center of mass (for contact search)
         com_to_A = sqrt( (self.coovertexloc[0])**2 + (self.coovertexloc[1])**2 )
         com_to_B = sqrt( (self.coovertexloc[2])**2 + (self.coovertexloc[3])**2 )
         com_to_C = sqrt( (self.coovertexloc[4])**2 + (self.coovertexloc[5])**2 )
         com_to_D = sqrt( (self.coovertexloc[6])**2 + (self.coovertexloc[7])**2 )
-
         self.r = max(com_to_A,com_to_B,com_to_C,com_to_D)
 
+        # geometrical center of polygon
         self.coo_geom_center = ( (self.coovertex[0]+self.coovertex[2]+self.coovertex[4]+self.coovertex[6])/4 , (self.coovertex[1]+self.coovertex[3]+self.coovertex[5]+self.coovertex[7])/4 )
         
+        # calculate boundary normals and angles at no rotation
+        self.normals_local = [None]*len(self.coovertex)
+        self.tangents_local = [None]*len(self.coovertex)
+        self.angles_local = [None]*int(len(self.coovertex)/2)
+        for i in range(int(len(self.coovertex)/2)):
+            if i == (int(len(self.coovertex)/2)-1): # if i is at the last xy-pair in the list
+                #line = [self.coovertex[2*i],self.coovertex[2*i+1],self.coovertex[0],self.coovertex[1]]
+                unitvec_t = [ self.coovertexloc[0] - self.coovertexloc[2*i] , self.coovertexloc[1] - self.coovertexloc[2*i+1] ] / sqrt( (self.coovertexloc[0] - self.coovertexloc[2*i])**2 + (self.coovertexloc[1] - self.coovertexloc[2*i+1])**2 )
+                unitvec_n = Rotvec2_90degcountercw(unitvec_t)
+                self.normals_local[2*i] = unitvec_n[0]
+                self.normals_local[2*i+1] = unitvec_n[1]
+                self.tangents_local[2*i] = unitvec_t[0]
+                self.tangents_local[2*i+1] = unitvec_t[1]
+                self.angles_local[i] = arctan(Safediv( (self.coovertexloc[1] - self.coovertexloc[2*i+1]) , (self.coovertexloc[0] - self.coovertexloc[2*i]) ))
+            else: # else, count as usual
+                #line = [self.coovertex[2*i],self.coovertex[2*i+1],self.coovertex[2*i+2],self.coovertex[2*i+3]]
+                unitvec_t = [ self.coovertexloc[2*i+2] - self.coovertexloc[2*i] , self.coovertexloc[2*i+3] - self.coovertexloc[2*i+1] ] / sqrt( (self.coovertexloc[2*i+2] - self.coovertexloc[2*i])**2 + (self.coovertexloc[2*i+3] - self.coovertexloc[2*i+1])**2 )
+                unitvec_n = Rotvec2_90degcountercw(unitvec_t)
+                self.normals_local[2*i] = unitvec_n[0]
+                self.normals_local[2*i+1] = unitvec_n[1] 
+                self.tangents_local[2*i] = unitvec_t[0]
+                self.tangents_local[2*i+1] = unitvec_t[1]
+                self.angles_local[i] = arctan(Safediv( (self.coovertexloc[2*i+3] - self.coovertexloc[2*i+1]) , (self.coovertexloc[2*i+2] - self.coovertexloc[2*i]) ))
+            canvas_1.create_line( self.coo1[0]+unitvec_n[0]*25,self.coo1[1]+unitvec_n[1]*25,self.coo1[0]+unitvec_n[0]*50,self.coo1[1]+unitvec_n[1]*50,arrow=LAST )
+        # rotate them to the starting rotation
+        self.normals_local_rotated = Rotxypairsinvec(self.normals_local,self.theta1)
+        self.tangents_local_rotated = Rotxypairsinvec(self.tangents_local,self.theta1)
+        self.angles_local_rotated = add(self.angles_local,self.theta1)
+
         '''
         self.cooAloc = Rotvec2([ -0.5*w , -0.5*h ],self.theta1)
         self.cooBloc = Rotvec2([ 0.5*w , -0.5*h ],self.theta1)
@@ -1879,6 +2053,11 @@ class Object_Box:
         self.coovertex = [ self.coo1[0]+self.coovertexlocrot[0] , self.coo1[1]+self.coovertexlocrot[1] , self.coo1[0]+self.coovertexlocrot[2] , self.coo1[1]+self.coovertexlocrot[3] , self.coo1[0]+self.coovertexlocrot[4] , self.coo1[1]+self.coovertexlocrot[5] , self.coo1[0]+self.coovertexlocrot[6] , self.coo1[1]+self.coovertexlocrot[7] ]
         
         self.coo_geom_center = ( (self.coovertex[0]+self.coovertex[2]+self.coovertex[4]+self.coovertex[6])/4 , (self.coovertex[1]+self.coovertex[3]+self.coovertex[5]+self.coovertex[7])/4 )
+        
+        self.normals_local_rotated = Rotxypairsinvec(self.normals_local,self.theta1)
+        self.tangents_local_rotated = Rotxypairsinvec(self.tangents_local,self.theta1)
+        self.angles_local_rotated = add(self.angles_local,self.theta1)
+
         '''
         self.cooA = add( self.coo1, self.cooAloc )
         self.cooB = add( self.coo1, self.cooBloc )
