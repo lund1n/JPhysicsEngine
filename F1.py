@@ -49,7 +49,7 @@ colcounter = 0
 debug_col_lines = 0
 
 t_elapsed = 0
-dt = 0.015
+dt = 0.025
 
 dtr = canvas_1.create_text(10,20,text="dt = "+str(dt),font=("arial",8),anchor=SW)
 t_elapsedr = canvas_1.create_text(10,30,text="t = "+str(round(t_elapsed,9)),font=("arial",8),anchor=SW)
@@ -1253,20 +1253,29 @@ def Collision_Polygon_Polygon(pg1,pg2):
         len_pg2 = len(pg2.coovertex)
         len_pg2_half = int(len(pg2.coovertex)/2)
 
+        colp_pg1 = [0]*len_pg1_half
+        colp_pg2 = [0]*len_pg2_half
+
+        #print("angle_pg1:   "+str(pg1.theta1)+",   angle_pg2:   "+str(pg2.theta1))
+
         for i in range(len_pg1_half):
-            intp_pg1 = intp_pg1 + Pointinsidepolygoncheck([pg1.coovertex[2*i],pg1.coovertex[2*i+1]],pg2.coovertex)
+            check_pg1 = Pointinsidepolygoncheck([pg1.coovertex[2*i],pg1.coovertex[2*i+1]],pg2.coovertex)
+            intp_pg1 = intp_pg1 + check_pg1
+            colp_pg1[i] = check_pg1
         for i in range(len_pg2_half):
-            intp_pg2 = intp_pg2 + Pointinsidepolygoncheck([pg2.coovertex[2*i],pg2.coovertex[2*i+1]],pg1.coovertex)
+            check_pg2 = Pointinsidepolygoncheck([pg2.coovertex[2*i],pg2.coovertex[2*i+1]],pg1.coovertex)
+            intp_pg2 = intp_pg2 + check_pg2
+            colp_pg2[i] = check_pg2
 
         pg1_unitvec_n = multiply(-1,pg1.normals_local_rotated)
         pg1_unitvec_t = pg1.tangents_local_rotated
         pg2_unitvec_n = pg2.normals_local_rotated
         pg2_unitvec_t = pg2.tangents_local_rotated
 
-        def Contact_o1_o2(o1,o2,n_int,lo1,lo1h,lo2,lo2h,unitvec_n,unitvec_t):
+        def Contact_o1_o2(o1,o2,n_int,lo1,lo1h,lo2,lo2h,unitvec_n,unitvec_t,colp_o1):
 
-            if n_int > 0:
-                for i in range(lo1h):
+            if n_int > 0: # if a point/vertex of o1 is inside of o2
+                for i in range(lo1h): # for every point in o1 ...
                     
                     point = [o1.coovertex[2*i],o1.coovertex[2*i+1]]
 
@@ -1274,7 +1283,8 @@ def Collision_Polygon_Polygon(pg1,pg2):
                     int_list = [None]*lo2
                     ool_list = [None]*lo2h
 
-                    for j in range(lo2h):
+                    #####
+                    for j in range(lo2h): # ... go through all lines in o2
                         if j == (lo2h-1): # if i is at the last xy-pair in the list
                             line = [o2.coovertex[2*j],o2.coovertex[2*j+1],o2.coovertex[0],o2.coovertex[1]]
                         else: # else, count as usual
@@ -1283,20 +1293,36 @@ def Collision_Polygon_Polygon(pg1,pg2):
                         line_angle = o2.angles_local_rotated[j]
 
                         cooint = ClosestPointOnLineBoundary2(point[0],point[1],line,line_angle)
-                        dist_list[j] = cooint[2]
-                        int_list[2*j] = cooint[0]
-                        int_list[2*j+1] = cooint[1]
-                        ool_list[j] = cooint[3]
-                        
+                        dist_list[j] = cooint[2] # store distance of closest point of o1 point on the o2 line
+                        int_list[2*j] = cooint[0] # store x coordinate of closest point of o1 point on the o2 line
+                        int_list[2*j+1] = cooint[1] # store y coordinate of closest point of o1 point on the o2 line
+                        ool_list[j] = cooint[3] # outside of line list. checks if the o1 point is outside of the endpoints of the o2 line and thus cant hit it
+                    #####
+
                     shortest_dist = min(dist_list)
                     shortest_dist_index = dist_list.index(shortest_dist)
                     colpx = int_list[2*shortest_dist_index]
                     colpy = int_list[2*shortest_dist_index+1]
                     #unitvec_n = o2.normals_local_rotated
                     #unitvec_t = o2.tangents_local_rotated
-                    if ool_list[shortest_dist_index]==0:
+                    
+                    if ool_list[shortest_dist_index]==0 and colp_o1[i]==1:
                         #canvas_1.create_oval(colpx-3,colpy-3,colpx+3,colpy+3,fill="green",outline="green")
                         Contact_line_line(o1,o2,[colpx,colpy,0],unitvec_n,unitvec_t) # WORK HERE
+
+                        print("###############################")
+                        print("i: "+str(i))
+                        print(shortest_dist_index)
+                        print(colp_o1)
+                        print(dist_list)
+                        print(shortest_dist)
+                        print("colp_pg1:   "+str(colp_pg1))
+                        print("colp_pg2:   "+str(colp_pg2))
+                        if o1 == pg1:
+                            print("pg1")
+                        if o1 == pg2:
+                            print("pg2")
+                        print("###############################")
 
                         
                         pendist = shortest_dist
@@ -1316,10 +1342,10 @@ def Collision_Polygon_Polygon(pg1,pg2):
                             o2.coovertex[2*i] = subtract( o2.coovertex[2*i] , o2_xy_translate[0] )
                             o2.coovertex[2*i+1] = subtract( o2.coovertex[2*i+1] , o2_xy_translate[1] )
                         
+                        
         
-        Contact_o1_o2(pg1,pg2,intp_pg1,len_pg1,len_pg1_half,len_pg2,len_pg2_half,pg2_unitvec_n,pg2_unitvec_t)
-        Contact_o1_o2(pg2,pg1,intp_pg2,len_pg2,len_pg2_half,len_pg1,len_pg1_half,pg1_unitvec_n,pg1_unitvec_t)
-
+        Contact_o1_o2(pg1,pg2,intp_pg1,len_pg1,len_pg1_half,len_pg2,len_pg2_half,pg2_unitvec_n,pg2_unitvec_t,colp_pg1)
+        Contact_o1_o2(pg2,pg1,intp_pg2,len_pg2,len_pg2_half,len_pg1,len_pg1_half,pg1_unitvec_n,pg1_unitvec_t,colp_pg2)
 
 def Collision_Box_Box_OLD(box1,box2):
 
@@ -1981,7 +2007,7 @@ class Object_Box:
                 self.tangents_local[2*i] = unitvec_t[0]
                 self.tangents_local[2*i+1] = unitvec_t[1]
                 self.angles_local[i] = arctan(Safediv( (self.coovertexloc[2*i+3] - self.coovertexloc[2*i+1]) , (self.coovertexloc[2*i+2] - self.coovertexloc[2*i]) ))
-            canvas_1.create_line( self.coo1[0]+unitvec_n[0]*25,self.coo1[1]+unitvec_n[1]*25,self.coo1[0]+unitvec_n[0]*50,self.coo1[1]+unitvec_n[1]*50,arrow=LAST )
+            #canvas_1.create_line( self.coo1[0]+unitvec_n[0]*25,self.coo1[1]+unitvec_n[1]*25,self.coo1[0]+unitvec_n[0]*50,self.coo1[1]+unitvec_n[1]*50,arrow=LAST )
         # rotate them to the starting rotation
         self.normals_local_rotated = Rotxypairsinvec(self.normals_local,self.theta1)
         self.tangents_local_rotated = Rotxypairsinvec(self.tangents_local,self.theta1)
@@ -2521,6 +2547,7 @@ obj.append(Object_Line(canvas_1,350,500,350,600,3.5,50,rho_rubber,0.5,0.5)) #270
 obj.append(Object_Line(canvas_1,355,350,350,450,3.5,50,rho_rubber,0.5,0.5)) #270,150 | 390,70
 
 obj.append(Object_Box(canvas_1,540,400,50,40,40,rho_rubber,0.5,0.5,0.2,-0.3))
+obj.append(Object_Box(canvas_1,550,330,70,20,40,rho_rubber,0.5,0.5,-0.3,0.1))
 
 x_m = 0
 y_m = 0
@@ -2535,19 +2562,22 @@ canvas_1.bind('<Motion>', motion)
 #Testkommentar för githubcommit
 
 ## ATT GÖRA:
+# initial angle 
+# initial angular velocity
+# initial velocity
+# alla krafter osv funkar för poly2poly, men antipenetreringsisärflyttningen skickar ibland in polygonerna i varandra. något med normalerna?
 # ball to box - ändra så att du räknar ut avstånden till alla ytorna och ta det kortaste, istället för y=kx+m?
 # ball to box - boll mot kant går igenom varandra aningen. ej fixat pga lathet. se om du orkar. ClosestPointOnLineBoundary.
 # Det är något skumt med box - line kollisionerna. Ibland går de igenom varandra.
 # Zoomfunktion av planen (STORT):
 #   - Gör om alla ritkommandon så att de är funktioner med skalning inbyggt som kallas
-#   - Lägg till en "måttstock" längst ned på skärmen som skalas med skalningsnivån
+#   - Lägg till en "måttstock" längst ned på skärmen som skalas med skalningsnivån (tänk ANSYS)
 # Ha alla vertices for ett object i x- och y-listor, istället för som separata variabler. Bör ge snyggare kod och förenkla collision- och contact-funktionerna. En enda sådan funktion för alla fall?
 # Fixa luftmotståndspilarnas riktning som pekar mest 90 grader isär pga anv av tanh på F_D:s komposanter
 # Skapa allmän apply force-funktion som går att använda på vilken punkt som helst på vilket objekt som helst
 # Skapa mediemotstånd (luftmotstånd etc.) för rotation
 # Varför funkar den nya impulsekvationen i L2FL och inte den gamla?
 # Ha kraftpilar osv som ett separat objekt. Som Trace
-# fixa initial velocity för ball
 # cube 
 # för fyrkanter/avlånga objekt osv, beräkna dess tvärsnittsarea som möter vinden varje tidssteg - påverkar luftmotsståndet - kan skapa vingar osv
 # skapa musdrag av prylar
