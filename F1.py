@@ -503,6 +503,9 @@ def Check_CollisionType(o1,o2):
         if isinstance(o2, Object_Ball):
             Collision_Ball_Ball(o1,o2)
             return
+        if isinstance(o2, Object_Box):
+            Collision_Ball_Polygon(o1,o2)
+            return
         if isinstance(o2, Object_Line):
             Collision_Ball_Line(o1,o2)
             return
@@ -511,9 +514,9 @@ def Check_CollisionType(o1,o2):
         if isinstance(o2, Object_FixedLine):
             Collision_Ball_FixedLine(o1,o2)
             return
-        if isinstance(o2, Object_Box):
-            Collision_Ball_Box(o2,o1)
-            return
+        #if isinstance(o2, Object_Box):
+        #    Collision_Ball_Box(o2,o1)
+        #    return
 
     if isinstance(o1, Object_FixedLine):
         if isinstance(o2, Object_Ball):
@@ -547,8 +550,11 @@ def Check_CollisionType(o1,o2):
         if isinstance(o2, Object_Line):
             Collision_Box_Line(o1,o2)
             return
+        #if isinstance(o2, Object_Ball):
+        #    Collision_Ball_Box(o1,o2)
+        #    return
         if isinstance(o2, Object_Ball):
-            Collision_Ball_Box(o1,o2)
+            Collision_Ball_Polygon(o2,o1)
             return
         if isinstance(o2, Object_Box):
             Collision_Polygon_Polygon(o1,o2)
@@ -1083,6 +1089,85 @@ def Collision_Line_FixedLine(line,fl):
         #    #print(coocol_box2_lineA)
         #    Dp.moveto( coocol_box2_lineA[0],coocol_box2_lineA[1] )
 
+
+def Collision_Ball_Polygon(ball,polygon):
+
+    if sqrt( (ball.coo0[0]-polygon.coo0[0])**2 + (ball.coo0[1]-polygon.coo0[1])**2 ) <= (ball.r + polygon.r):
+        len_polygon = len(polygon.coovertex)
+        len_polygon_half = int(len(polygon.coovertex)/2)
+
+        check_ball = Pointinsidepolygoncheck([ball.coo1[0],ball.coo1[1]],polygon.coovertex)
+
+        polygon_unitvec_n = polygon.normals_local_rotated
+        polygon_unitvec_t = polygon.tangents_local_rotated
+
+        if check_ball > 0: # if a point/vertex of ball is inside of polygon
+            
+
+            point = [ball.coo1[0],ball.coo1[1]]
+
+            dist_list = [None]*len_polygon_half
+            int_list = [None]*len_polygon
+            ool_list = [None]*len_polygon_half
+
+            #####
+            for j in range(len_polygon_half): # ... go through all lines in polygon
+                if j == (len_polygon_half-1): # if i is at the last xy-pair in the list
+                    line = [polygon.coovertex[2*j],polygon.coovertex[2*j+1],polygon.coovertex[0],polygon.coovertex[1]]
+                else: # else, count as usual
+                    line = [polygon.coovertex[2*j],polygon.coovertex[2*j+1],polygon.coovertex[2*j+2],polygon.coovertex[2*j+3]]
+                
+                line_angle = polygon.angles_local_rotated[j]
+
+                cooint = ClosestPointOnLineBoundary2(point[0],point[1],line,line_angle)
+                dist_list[j] = cooint[2] # store distance of closest point of o1 point on the o2 line
+                int_list[2*j] = cooint[0] # store x coordinate of closest point of o1 point on the o2 line
+                int_list[2*j+1] = cooint[1] # store y coordinate of closest point of o1 point on the o2 line
+                ool_list[j] = cooint[3] # outside of line list. checks if the o1 point is outside of the endpoints of the o2 line and thus cant hit it
+            #####
+
+            shortest_dist = min(dist_list)
+            shortest_dist_index = dist_list.index(shortest_dist)
+            colpx = int_list[2*shortest_dist_index]
+            colpy = int_list[2*shortest_dist_index+1]
+            
+            if ool_list[shortest_dist_index]==0:
+                #canvas_1.create_oval(colpx-3,colpy-3,colpx+3,colpy+3,fill="green",outline="green")
+                Contact_line_line(ball,polygon,[colpx,colpy,0],[polygon_unitvec_n[2*shortest_dist_index],polygon_unitvec_n[2*shortest_dist_index+1],0],[polygon_unitvec_t[2*shortest_dist_index],polygon_unitvec_t[2*shortest_dist_index+1],0]) # WORK HERE
+
+                '''
+                print("###############################")
+                #print("i: "+str(i))
+                print(shortest_dist_index)
+                #print(colp_o1)
+                print(dist_list)
+                print(shortest_dist)
+                print([unitvec_n[2*shortest_dist_index],unitvec_n[2*shortest_dist_index+1],0])
+                print([unitvec_t[2*shortest_dist_index],unitvec_t[2*shortest_dist_index+1],0])
+                print("colp_ball:   "+str(colp_ball))
+                print("colp_polygon:   "+str(colp_polygon))
+                #if o1 == ball:
+                #    print("ball")
+                #if o1 == polygon:
+                #    print("polygon")
+                print("###############################")
+                '''
+                
+                pendist = shortest_dist
+                ball_xy_translate = multiply(ball.m/(ball.m+polygon.m)*pendist,[polygon_unitvec_n[2*shortest_dist_index],polygon_unitvec_n[2*shortest_dist_index+1]])
+                polygon_xy_translate = multiply(polygon.m/(ball.m+polygon.m)*pendist,[polygon_unitvec_n[2*shortest_dist_index],polygon_unitvec_n[2*shortest_dist_index+1]])
+                ball.coo1 = subtract( ball.coo1 , ball_xy_translate )
+                ball.coo0 = subtract( ball.coo0 , ball_xy_translate )
+                ball.coom1 = subtract( ball.coom1 , ball_xy_translate )
+                
+                polygon.coo1 = add( polygon.coo1 , polygon_xy_translate )
+                polygon.coo0 = add( polygon.coo0 , polygon_xy_translate )
+                polygon.coom1 = add( polygon.coom1 , polygon_xy_translate )
+                for i in range(len_polygon_half):
+                    polygon.coovertex[2*i] = add( polygon.coovertex[2*i] , polygon_xy_translate[0] )
+                    polygon.coovertex[2*i+1] = add( polygon.coovertex[2*i+1] , polygon_xy_translate[1] )
+                        
+
 def Collision_Ball_Box(box,ball):
     
     #r_pinball = ball.r
@@ -1267,7 +1352,7 @@ def Collision_Polygon_Polygon(pg1,pg2):
             intp_pg2 = intp_pg2 + check_pg2
             colp_pg2[i] = check_pg2
 
-        pg1_unitvec_n = multiply(-1,pg1.normals_local_rotated)
+        pg1_unitvec_n = pg1.normals_local_rotated
         pg1_unitvec_t = pg1.tangents_local_rotated
         pg2_unitvec_n = pg2.normals_local_rotated
         pg2_unitvec_t = pg2.tangents_local_rotated
@@ -1308,39 +1393,44 @@ def Collision_Polygon_Polygon(pg1,pg2):
                     
                     if ool_list[shortest_dist_index]==0 and colp_o1[i]==1:
                         #canvas_1.create_oval(colpx-3,colpy-3,colpx+3,colpy+3,fill="green",outline="green")
-                        Contact_line_line(o1,o2,[colpx,colpy,0],unitvec_n,unitvec_t) # WORK HERE
+                        Contact_line_line(o1,o2,[colpx,colpy,0],[unitvec_n[2*shortest_dist_index],unitvec_n[2*shortest_dist_index+1],0],[unitvec_t[2*shortest_dist_index],unitvec_t[2*shortest_dist_index+1],0]) # WORK HERE
 
+                        '''
                         print("###############################")
-                        print("i: "+str(i))
+                        #print("i: "+str(i))
                         print(shortest_dist_index)
-                        print(colp_o1)
+                        #print(colp_o1)
                         print(dist_list)
                         print(shortest_dist)
+                        print([unitvec_n[2*shortest_dist_index],unitvec_n[2*shortest_dist_index+1],0])
+                        print([unitvec_t[2*shortest_dist_index],unitvec_t[2*shortest_dist_index+1],0])
                         print("colp_pg1:   "+str(colp_pg1))
                         print("colp_pg2:   "+str(colp_pg2))
-                        if o1 == pg1:
-                            print("pg1")
-                        if o1 == pg2:
-                            print("pg2")
+                        #if o1 == pg1:
+                        #    print("pg1")
+                        #if o1 == pg2:
+                        #    print("pg2")
                         print("###############################")
-
+                        '''
                         
                         pendist = shortest_dist
-                        o1_xy_translate = multiply(o1.m/(o1.m+o2.m)*pendist,[unitvec_n[0],unitvec_n[1]])
-                        o2_xy_translate = multiply(o2.m/(o1.m+o2.m)*pendist,[unitvec_n[0],unitvec_n[1]])
-                        o1.coo1 = add( o1.coo1 , o1_xy_translate )
-                        o1.coo0 = add( o1.coo0 , o1_xy_translate )
-                        o1.coom1 = add( o1.coom1 , o1_xy_translate )
+                        o1_xy_translate = multiply(o1.m/(o1.m+o2.m)*pendist,[unitvec_n[2*shortest_dist_index],unitvec_n[2*shortest_dist_index+1]])
+                        o2_xy_translate = multiply(o2.m/(o1.m+o2.m)*pendist,[unitvec_n[2*shortest_dist_index],unitvec_n[2*shortest_dist_index+1]])
+                        o1.coo1 = subtract( o1.coo1 , o1_xy_translate )
+                        o1.coo0 = subtract( o1.coo0 , o1_xy_translate )
+                        o1.coom1 = subtract( o1.coom1 , o1_xy_translate )
                         for i in range(lo1h):
-                            o1.coovertex[2*i] = add( o1.coovertex[2*i] , o1_xy_translate[0] )
-                            o1.coovertex[2*i+1] = add( o1.coovertex[2*i+1] , o1_xy_translate[1] )
-
-                        o2.coo1 = subtract( o2.coo1 , o2_xy_translate )
-                        o2.coo0 = subtract( o2.coo0 , o2_xy_translate )
-                        o2.coom1 = subtract( o2.coom1 , o2_xy_translate )
+                            o1.coovertex[2*i] = subtract( o1.coovertex[2*i] , o1_xy_translate[0] )
+                            o1.coovertex[2*i+1] = subtract( o1.coovertex[2*i+1] , o1_xy_translate[1] )
+                        
+                        o2.coo1 = add( o2.coo1 , o2_xy_translate )
+                        o2.coo0 = add( o2.coo0 , o2_xy_translate )
+                        o2.coom1 = add( o2.coom1 , o2_xy_translate )
                         for i in range(lo2h):
-                            o2.coovertex[2*i] = subtract( o2.coovertex[2*i] , o2_xy_translate[0] )
-                            o2.coovertex[2*i+1] = subtract( o2.coovertex[2*i+1] , o2_xy_translate[1] )
+                            o2.coovertex[2*i] = add( o2.coovertex[2*i] , o2_xy_translate[0] )
+                            o2.coovertex[2*i+1] = add( o2.coovertex[2*i+1] , o2_xy_translate[1] )
+                        
+                        
                         
                         
         
@@ -2012,6 +2102,11 @@ class Object_Box:
         self.normals_local_rotated = Rotxypairsinvec(self.normals_local,self.theta1)
         self.tangents_local_rotated = Rotxypairsinvec(self.tangents_local,self.theta1)
         self.angles_local_rotated = add(self.angles_local,self.theta1)
+        
+        #self.n1 = canvas_1.create_line( self.coo1[0]+self.normals_local_rotated[0]*15,self.coo1[1]+self.normals_local_rotated[1]*15,self.coo1[0]+self.normals_local_rotated[0]*30,self.coo1[1]+self.normals_local_rotated[1]*30,arrow=LAST )
+        #self.n2 = canvas_1.create_line( self.coo1[0]+self.normals_local_rotated[2]*15,self.coo1[1]+self.normals_local_rotated[3]*15,self.coo1[0]+self.normals_local_rotated[2]*30,self.coo1[1]+self.normals_local_rotated[3]*30,arrow=LAST )
+        #self.n3 = canvas_1.create_line( self.coo1[0]+self.normals_local_rotated[4]*15,self.coo1[1]+self.normals_local_rotated[5]*15,self.coo1[0]+self.normals_local_rotated[4]*30,self.coo1[1]+self.normals_local_rotated[5]*30,arrow=LAST )
+        #self.n4 = canvas_1.create_line( self.coo1[0]+self.normals_local_rotated[6]*15,self.coo1[1]+self.normals_local_rotated[7]*15,self.coo1[0]+self.normals_local_rotated[6]*30,self.coo1[1]+self.normals_local_rotated[7]*30,arrow=LAST )
 
         '''
         self.cooAloc = Rotvec2([ -0.5*w , -0.5*h ],self.theta1)
@@ -2083,6 +2178,11 @@ class Object_Box:
         #print(self.cooB)
         #print(self.cooC)
         #print(self.cooD)
+        
+        #self.canvas.coords( self.n1,self.coo1[0]+self.normals_local_rotated[0]*15,self.coo1[1]+self.normals_local_rotated[1]*15,self.coo1[0]+self.normals_local_rotated[0]*30,self.coo1[1]+self.normals_local_rotated[1]*30 )
+        #self.canvas.coords( self.n2,self.coo1[0]+self.normals_local_rotated[2]*15,self.coo1[1]+self.normals_local_rotated[3]*15,self.coo1[0]+self.normals_local_rotated[2]*30,self.coo1[1]+self.normals_local_rotated[3]*30 )
+        #self.canvas.coords( self.n3,self.coo1[0]+self.normals_local_rotated[4]*15,self.coo1[1]+self.normals_local_rotated[5]*15,self.coo1[0]+self.normals_local_rotated[4]*30,self.coo1[1]+self.normals_local_rotated[5]*30 )
+        #self.canvas.coords( self.n4,self.coo1[0]+self.normals_local_rotated[6]*15,self.coo1[1]+self.normals_local_rotated[7]*15,self.coo1[0]+self.normals_local_rotated[6]*30,self.coo1[1]+self.normals_local_rotated[7]*30 )
 
 
 
