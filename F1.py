@@ -40,7 +40,7 @@ obj = []
 con = []
 viz_sf = 40
 viz_sf2 = 1000000
-sf_farrow1 = 100
+sf_farrow1 = 50
 sf_farrow2 = 100000000
 viz = []
 
@@ -49,7 +49,7 @@ colcounter = 0
 debug_col_lines = 0
 
 t_elapsed = 0
-dt = 0.025
+dt = 0.015
 
 dtr = canvas_1.create_text(10,20,text="dt = "+str(dt),font=("arial",8),anchor=SW)
 t_elapsedr = canvas_1.create_text(10,30,text="t = "+str(round(t_elapsed,9)),font=("arial",8),anchor=SW)
@@ -129,6 +129,12 @@ def Safediv(up,down):
     #    return [ up[0]/down , up[1]/down ]
     else:
         return sign(up)*100000000
+
+def Normalize(vec2):
+    return Safediv( vec2 , sqrt( vec2[0]**2 + vec2[1]**2 ) )
+
+def Magnitude(vec2):
+    return sqrt( vec2[0]**2 + vec2[1]**2 )
 
 def Crossprod_vec2(v,w):
     return v[0]*w[1]-v[1]*w[0]
@@ -454,12 +460,12 @@ def Pointinsidepolygoncheck(pointcoo,polygoncoo):
 
         if line[1] == line[3]: # is the line horizontal?
             # raycast upwards
-            if pointcoo[0] >= line_min_x and pointcoo[0] < line_max_x and line[1] < pointcoo[1]:
+            if pointcoo[0] >= line_min_x and pointcoo[0] < line_max_x and line[1] <= pointcoo[1]:
                 ints_v = ints_v + 1
 
         elif line[0] == line[2]: # is the line vertical?
             # raycast to the sides
-            if pointcoo[1] >= line_min_y and pointcoo[1] < line_max_y and line[0] < pointcoo[0]:
+            if pointcoo[1] >= line_min_y and pointcoo[1] <= line_max_y and line[0] <= pointcoo[0]:
                 ints_h = ints_h + 1
 
         else: # now we can safely check the line which must be sloped
@@ -476,10 +482,10 @@ def Pointinsidepolygoncheck(pointcoo,polygoncoo):
             #canvas_1.coords(p3_draw,x_int_v-3,y_int_v-3,x_int_v+3,y_int_v+3)
             
             # raycast upwards
-            if x_int_v >= line_min_x and x_int_v < line_max_x and y_int_v < pointcoo[1]:
+            if x_int_v >= line_min_x and x_int_v <= line_max_x and y_int_v <= pointcoo[1]:
                 ints_v = ints_v + 1
             # raycast to the sides
-            if x_int_h >= line_min_x and x_int_h < line_max_x and x_int_h < pointcoo[0]:
+            if x_int_h >= line_min_x and x_int_h <= line_max_x and x_int_h <= pointcoo[0]:
                 ints_h = ints_h + 1
             
     if (ints_h%2) != 0 and (ints_v%2) != 0:
@@ -490,12 +496,131 @@ def Pointinsidepolygoncheck(pointcoo,polygoncoo):
         
     return point_inside_polygon
 
+
+def Ballinsidepolygoncheck(pointcoo,polygoncoo,ballradius,lineangles,linenormals):
+
+    #inside_or_outside_checklist = (len(polygoncoo)/2)*[0] # create a list entry for every line in the polygon
+    point_inside_polygon = 0
+    ints_h = 0
+    ints_v = 0
+
+    for i in range(int(len(polygoncoo)/2)):
+        if i == (int(len(polygoncoo)/2)-1): # if i is at the last xy-pair in the list
+            line = [polygoncoo[2*i],polygoncoo[2*i+1],polygoncoo[0],polygoncoo[1]]
+        else: # else, count as usual
+            line = [polygoncoo[2*i],polygoncoo[2*i+1],polygoncoo[2*i+2],polygoncoo[2*i+3]]
+
+        line_max_x = max(line[0],line[2])
+        line_min_x = min(line[0],line[2])
+        line_max_y = max(line[1],line[3])
+        line_min_y = min(line[1],line[3])
+
+        if line[1] == line[3]: # is the line horizontal?
+            # raycast upwards
+            if pointcoo[0] >= line_min_x and pointcoo[0] < line_max_x and (pointcoo[1]+ballradius*linenormals[2*i+1]) > line[1]:
+                ints_v = ints_v + 1
+
+        elif line[0] == line[2]: # is the line vertical?
+            # raycast to the sides
+            if pointcoo[1] >= line_min_y and pointcoo[1] < line_max_y and (pointcoo[0]+ballradius*linenormals[2*i]) > line[0]:
+                ints_h = ints_h + 1
+
+        else: # now we can safely check the line which must be sloped
+            k = (line[3]-line[1]) / (line[2]-line[0]) # already determined to not be zero or infinity
+            m = line[1]-k*line[0]
+
+            x_int_h = (pointcoo[1]-m)/k
+            y_int_h = k*x_int_h+m
+            
+            y_int_v = k*pointcoo[0]+m
+            x_int_v = (y_int_v-m)/k
+
+            #canvas_1.coords(p2_draw,x_int_h-3,y_int_h-3,x_int_h+3,y_int_h+3)
+            #canvas_1.coords(p3_draw,x_int_v-3,y_int_v-3,x_int_v+3,y_int_v+3)
+            # raycast upwards
+            if (x_int_v-ballradius*linenormals[2*i]) >= line_min_x and (x_int_v-ballradius*linenormals[2*i]) < line_max_x and (y_int_v-ballradius*linenormals[2*i+1]) < pointcoo[1]:
+                ints_v = ints_v + 1
+                #print(ballradius)
+                #print("#######")
+                #print(y_int_v)
+                #print(ballradius*abs(cos(lineangles[i])))
+                #print(y_int_v+ballradius*abs(cos(lineangles[i])))
+                #print(pointcoo[1])
+                #print("#######")
+            # raycast to the sides
+            if (x_int_h-ballradius*linenormals[2*i]) >= line_min_x and (x_int_h-ballradius*linenormals[2*i]) < line_max_x and (x_int_h-ballradius*linenormals[2*i]) < pointcoo[0]:
+                ints_h = ints_h + 1
+                #print(ballradius*abs(sin(lineangle[i])))
+
+            
+    if (ints_h%2) != 0 and (ints_v%2) != 0:
+        point_inside_polygon = 1
+        #canvas_1.itemconfigure(p_draw,fill="green",outline="green")
+        #canvas_1.coords(p_draw,x_m-5,y_m-5,x_m+5,y_m+5)
+        #canvas_1.create_oval(x_m-2,y_m-2,x_m+2,y_m+2,fill="black",outline="black")
+        
+    return point_inside_polygon
+
+'''
+#OLD CODE
 def IntersectionPoint_Line_Line(l1,l2):
     cooint = [0,0]
     # 2 line intersection
     cooint[0] = Safediv( ( (l2.cooA[1]-l2.k*l2.cooA[0])-(l1.cooA[1]-l1.k*l1.cooA[0]) ),(l1.k-l2.k) ) #xi = (m2-m1)/(k1-k2) = ( (y2-k2x2)-(y1-k1x1) )/(k1-k2)
     cooint[1] = l1.k*cooint[0]+(l1.cooA[1]-l1.k*l1.cooA[0]) # yi = k1xi+m1 = k1xi+(y1-k1x1)
     return cooint
+'''
+def IntersectionPoint_Line_Line(l1,l2):
+
+    iols = 0 # intersection inside of line segment
+
+    if l1[0] == l1[2]: # line 1 vertical
+        if l2[0] == l2[2]: # line 2 vertical
+            return [ 0 , 0 , 0 ]
+        elif l2[1] == l2[3]: # line 2 horizontal
+            iols = ( l1[0]>=min(l2[0],l2[2]) )*( l1[0]<=max(l2[0],l2[2]) )*( min(l1[1],l1[3])<=l2[1] )*( max(l1[1],l1[3])>=l2[1] )
+            return [ l1[0] , l2[1] , iols ]
+        else: # line 2 angled
+            k2 = (l2[3]-l2[1]) / (l2[2]-l2[0]) # already determined to not be zero or infinity
+            m2 = l2[1]-k2*l2[0]
+            x_int = l1[0]
+            y_int = k2*x_int+m2
+            iols = ( x_int>=min(l2[0],l2[2]) )*( x_int<=max(l2[0],l2[2]) )*( min(l1[1],l1[3])<=y_int )*( max(l1[1],l1[3])>=y_int )
+            return [ x_int , y_int , iols ]
+
+    elif l1[1] == l1[3]: # line 1 horizontal
+        if l2[0] == l2[2]: # line 2 vertical
+            iols = ( l2[0]>=min(l1[0],l1[2]) )*( l2[0]<=max(l1[0],l1[2]) )*( min(l2[1],l2[3])<=l1[1] )*( max(l2[1],l2[3])>=l1[1] )
+            return [ l2[0] , l1[1] , iols ]
+        elif l2[1] == l2[3]: # line 2 horizontal
+            return [ 0 , 0 , 0 ]
+        else: # line 2 angled
+            k2 = (l2[3]-l2[1]) / (l2[2]-l2[0]) # already determined to not be zero or infinity
+            m2 = l2[1]-k2*l2[0]
+            y_int = l1[1]
+            x_int = (y_int-m2)/k2
+            iols = ( x_int>=min(l1[0],l1[2]) )*( x_int<=max(l1[0],l1[2]) )*( min(l2[1],l2[3])<=y_int )*( max(l2[1],l2[3])>=y_int )
+            return [ x_int , y_int , iols ]
+    else: # line 1 angled
+        k1 = (l1[3]-l1[1]) / (l1[2]-l1[0]) # already determined to not be zero or infinity
+        m1 = l1[1]-k1*l1[0]
+        if l2[0] == l2[2]: # line 2 vertical
+            x_int = l2[0]
+            y_int = k1*x_int+m1
+            iols = ( x_int>=min(l1[0],l1[2]) )*( x_int<=max(l1[0],l1[2]) )*( min(l2[1],l2[3])<=y_int )*( max(l2[1],l2[3])>=y_int )
+            return [ x_int , y_int , iols ]
+        elif l2[1] == l2[3]: # line 2 horizontal
+            y_int = l2[1]
+            x_int = (y_int-m1)/k1
+            iols = ( x_int>=min(l2[0],l2[2]) )*( x_int<=max(l2[0],l2[2]) )*( min(l1[1],l1[3])<=y_int )*( max(l1[1],l1[3])>=y_int )
+            return [ x_int , y_int , iols ]
+        else:
+            k2 = (l2[3]-l2[1]) / (l2[2]-l2[0]) # already determined to not be zero or infinity
+            m2 = l2[1]-k2*l2[0]
+            x_int = (m2-m1)/(k1-k2)
+            y_int = k1*x_int+m1
+            iols = ( x_int>=min(l2[0],l2[2]) )*( x_int<=max(l2[0],l2[2]) )*( min(l1[1],l1[3])<=y_int )*( max(l1[1],l1[3])>=y_int )
+            return [ x_int , y_int , iols ]
 
 def Check_CollisionType(o1,o2):
 
@@ -1096,7 +1221,8 @@ def Collision_Ball_Polygon(ball,polygon):
         len_polygon = len(polygon.coovertex)
         len_polygon_half = int(len(polygon.coovertex)/2)
 
-        check_ball = Pointinsidepolygoncheck([ball.coo1[0],ball.coo1[1]],polygon.coovertex)
+        check_ball = Ballinsidepolygoncheck([ball.coo1[0],ball.coo1[1]],polygon.coovertex,ball.r,polygon.angles_local_rotated,polygon.normals_local_rotated)
+        #check_ball = Pointinsidepolygoncheck([ball.coo1[0],ball.coo1[1]],polygon.coovertex)
 
         polygon_unitvec_n = polygon.normals_local_rotated
         polygon_unitvec_t = polygon.tangents_local_rotated
@@ -1130,6 +1256,8 @@ def Collision_Ball_Polygon(ball,polygon):
             shortest_dist_index = dist_list.index(shortest_dist)
             colpx = int_list[2*shortest_dist_index]
             colpy = int_list[2*shortest_dist_index+1]
+            #colpx = colpx + polygon_unitvec_n[2*shortest_dist_index]*ball.r
+            #colpy = colpy + polygon_unitvec_n[2*shortest_dist_index+1]*ball.r
             
             if ool_list[shortest_dist_index]==0:
                 #canvas_1.create_oval(colpx-3,colpy-3,colpx+3,colpy+3,fill="green",outline="green")
@@ -1167,7 +1295,6 @@ def Collision_Ball_Polygon(ball,polygon):
                     polygon.coovertex[2*i] = add( polygon.coovertex[2*i] , polygon_xy_translate[0] )
                     polygon.coovertex[2*i+1] = add( polygon.coovertex[2*i+1] , polygon_xy_translate[1] )
                         
-
 def Collision_Ball_Box(box,ball):
     
     #r_pinball = ball.r
@@ -1330,23 +1457,26 @@ def Collision_Box_Line(box,line):
 
 def Collision_Polygon_Polygon(pg1,pg2):
 
-    if sqrt( (pg1.coo0[0]-pg2.coo0[0])**2 + (pg1.coo0[1]-pg2.coo0[1])**2 ) <= (pg1.r + pg2.r):
+    if sqrt( (pg1.coo0[0]-pg2.coo0[0])**2 + (pg1.coo0[1]-pg2.coo0[1])**2 ) <= (pg1.r + pg2.r): #if inside bounding box (change this to not use sqrt)
         intp_pg1 = 0
         intp_pg2 = 0
         len_pg1 = len(pg1.coovertex)
-        len_pg1_half = int(len(pg1.coovertex)/2)
+        len_pg1_half = int(len(pg1.coovertex)*0.5) #changed from /2 to *0.5. may or may not cause issues?
         len_pg2 = len(pg2.coovertex)
-        len_pg2_half = int(len(pg2.coovertex)/2)
+        len_pg2_half = int(len(pg2.coovertex)*0.5) #changed from /2 to *0.5. may or may not cause issues?
 
         colp_pg1 = [0]*len_pg1_half
         colp_pg2 = [0]*len_pg2_half
 
         #print("angle_pg1:   "+str(pg1.theta1)+",   angle_pg2:   "+str(pg2.theta1))
 
+        # Are any points of polygon 1 inside polygon 2?
         for i in range(len_pg1_half):
             check_pg1 = Pointinsidepolygoncheck([pg1.coovertex[2*i],pg1.coovertex[2*i+1]],pg2.coovertex)
-            intp_pg1 = intp_pg1 + check_pg1
-            colp_pg1[i] = check_pg1
+            intp_pg1 = intp_pg1 + check_pg1 #if the point is intersecting, increase this counter
+            colp_pg1[i] = check_pg1 #mark the vertex which is intersecting with a 1
+
+        # Are any points of polygon 2 inside polygon 1?
         for i in range(len_pg2_half):
             check_pg2 = Pointinsidepolygoncheck([pg2.coovertex[2*i],pg2.coovertex[2*i+1]],pg1.coovertex)
             intp_pg2 = intp_pg2 + check_pg2
@@ -1357,79 +1487,197 @@ def Collision_Polygon_Polygon(pg1,pg2):
         pg2_unitvec_n = pg2.normals_local_rotated
         pg2_unitvec_t = pg2.tangents_local_rotated
 
+        ###########################################################################################################################
+        ##### Define collision function #####
+        ###########################################################################################################################
+
         def Contact_o1_o2(o1,o2,n_int,lo1,lo1h,lo2,lo2h,unitvec_n,unitvec_t,colp_o1):
 
             if n_int > 0: # if a point/vertex of o1 is inside of o2
+
+                ### testsection
+                coolinecross_list = [None]*lo2
+                linesegcrossed_o1_list = [None]*lo1h
+                linesegcrossed_o2_list = [None]*lo2h
+
                 for i in range(lo1h): # for every point in o1 ...
-                    
+                    if i == (lo1h-1): # if i is at the last xy-pair in the list
+                        line1 = [o1.coovertex[2*i],o1.coovertex[2*i+1],o1.coovertex[0],o1.coovertex[1]]
+                    else: # else, count as usual
+                        line1 = [o1.coovertex[2*i],o1.coovertex[2*i+1],o1.coovertex[2*i+2],o1.coovertex[2*i+3]]
+
+                    for j in range(lo2h): # ... go through all lines in o2
+                        if j == (lo2h-1): # if i is at the last xy-pair in the list
+                            line2 = [o2.coovertex[2*j],o2.coovertex[2*j+1],o2.coovertex[0],o2.coovertex[1]]
+                        else: # else, count as usual
+                            line2 = [o2.coovertex[2*j],o2.coovertex[2*j+1],o2.coovertex[2*j+2],o2.coovertex[2*j+3]]
+
+                        crosspoint = IntersectionPoint_Line_Line([line1[0],line1[1],line1[2],line1[3]],[line2[0],line2[1],line2[2],line2[3]])
+                        if crosspoint[2] == 1: #if the crossing point of line1 and line2 is inside of the line2 endpoints
+                            coolinecross_list[2*j] = crosspoint[0]
+                            coolinecross_list[2*j+1] = crosspoint[1]
+                            linesegcrossed_o1_list[i] = 1 #DEBUG ONLY
+                            linesegcrossed_o2_list[j] = 1 #then mark line2 as a crossed segment of polygon2
+                            1==1
+                ### end testsection
+
+                for i in range(lo1h): # for every point in o1 ...
+                    '''
+                    if i == (lo1h-1): # if i is at the last xy-pair in the list
+                        line1 = [o1.coovertex[2*i],o1.coovertex[2*i+1],o1.coovertex[0],o1.coovertex[1]]
+                    else: # else, count as usual
+                        line1 = [o1.coovertex[2*i],o1.coovertex[2*i+1],o1.coovertex[2*i+2],o1.coovertex[2*i+3]]
+                    '''
+                    ###########################################################################################################################
+                    ##### Info necessary for the collision event #####
+                    ###########################################################################################################################
+
                     point = [o1.coovertex[2*i],o1.coovertex[2*i+1]]
 
                     dist_list = [None]*lo2h
                     int_list = [None]*lo2
                     ool_list = [None]*lo2h
+                    distlinecross_list = [-1]*lo2h
+
+
+                    crossed = 0  #crossed amount of line segments (NOT amount of crossings detected)
 
                     #####
                     for j in range(lo2h): # ... go through all lines in o2
                         if j == (lo2h-1): # if i is at the last xy-pair in the list
-                            line = [o2.coovertex[2*j],o2.coovertex[2*j+1],o2.coovertex[0],o2.coovertex[1]]
+                            line2 = [o2.coovertex[2*j],o2.coovertex[2*j+1],o2.coovertex[0],o2.coovertex[1]]
                         else: # else, count as usual
-                            line = [o2.coovertex[2*j],o2.coovertex[2*j+1],o2.coovertex[2*j+2],o2.coovertex[2*j+3]]
+                            line2 = [o2.coovertex[2*j],o2.coovertex[2*j+1],o2.coovertex[2*j+2],o2.coovertex[2*j+3]]
                         
-                        line_angle = o2.angles_local_rotated[j]
+                        line2_angle = o2.angles_local_rotated[j]
 
-                        cooint = ClosestPointOnLineBoundary2(point[0],point[1],line,line_angle)
-                        dist_list[j] = cooint[2] # store distance of closest point of o1 point on the o2 line
-                        int_list[2*j] = cooint[0] # store x coordinate of closest point of o1 point on the o2 line
-                        int_list[2*j+1] = cooint[1] # store y coordinate of closest point of o1 point on the o2 line
+                        cooint = ClosestPointOnLineBoundary2(point[0],point[1],line2,line2_angle)
+                        int_list[2*j] = cooint[0] # store x coordinate of closest point to o1 point on the o2 line
+                        int_list[2*j+1] = cooint[1] # store y coordinate of closest point to o1 point on the o2 line
+                        dist_list[j] = cooint[2] # store distance of closest point to o1 point on the o2 line
                         ool_list[j] = cooint[3] # outside of line list. checks if the o1 point is outside of the endpoints of the o2 line and thus cant hit it
+                        
+                        '''
+                        crosspoint = IntersectionPoint_Line_Line([line1[0],line1[1],line1[2],line1[3]],[line2[0],line2[1],line2[2],line2[3]])
+                        if crosspoint[2] == 1: #if the crossing point of line1 and line2 is inside of the line2 endpoints
+                            coolinecross_list[2*j] = crosspoint[0]
+                            coolinecross_list[2*j+1] = crosspoint[1]
+                            linesegcrossed_o1_list[i] = 1 #DEBUG ONLY
+                            linesegcrossed_o2_list[j] = 1 #then mark line2 as a crossed segment of polygon2
+                            1==1
+                        '''
+
                     #####
-
-                    shortest_dist = min(dist_list)
-                    shortest_dist_index = dist_list.index(shortest_dist)
-                    colpx = int_list[2*shortest_dist_index]
-                    colpy = int_list[2*shortest_dist_index+1]
-                    #unitvec_n = o2.normals_local_rotated
-                    #unitvec_t = o2.tangents_local_rotated
+                    for k in range(lo2h): #which line crossing point is the closest? it determines the line whose normal shall be used
+                        #distlinecross_list[k] = 
+                        if linesegcrossed_o1_list[k] == 1: #if the line segment of polygon1 has been crossed by a line segment of polygon2
+                            crossed = crossed + 1 #crossed amount of line segments (NOT amount of crossings detected)
+                        if linesegcrossed_o2_list[k] == 1: #if the line segment of polygon2 has been crossed by a line segment of polygon1
+                            cpolsei = ClosestPointOnLineSegmentEdgeIndicator(point[0],point[1],o2.linesegment(k))
+                            distlinecross_list[k] = cpolsei[2] #record the distance to the penetrating point
+                            crossed = crossed + 1 #crossed amount of line segments (NOT amount of crossings detected)
+                        #we now check if both polygons have crossed line segments (as opposed to just o2 as originally) and increment the "crossed" variable,
+                        #because if the combined number of line segments crossed is less than 3, which
+                        #for some reason sometimes happens when one box slides on top of another and two edge nodes pass,
+                        #one line segment crossing fails to become detected - the wrong face for separation is chosen as no other alternative is available,
+                        #and objects may separate by a long distance along the wrong face normal
                     
-                    if ool_list[shortest_dist_index]==0 and colp_o1[i]==1:
-                        #canvas_1.create_oval(colpx-3,colpy-3,colpx+3,colpy+3,fill="green",outline="green")
-                        Contact_line_line(o1,o2,[colpx,colpy,0],[unitvec_n[2*shortest_dist_index],unitvec_n[2*shortest_dist_index+1],0],[unitvec_t[2*shortest_dist_index],unitvec_t[2*shortest_dist_index+1],0]) # WORK HERE
+                    filtered = []
 
-                        '''
-                        print("###############################")
-                        #print("i: "+str(i))
-                        print(shortest_dist_index)
-                        #print(colp_o1)
-                        print(dist_list)
-                        print(shortest_dist)
-                        print([unitvec_n[2*shortest_dist_index],unitvec_n[2*shortest_dist_index+1],0])
-                        print([unitvec_t[2*shortest_dist_index],unitvec_t[2*shortest_dist_index+1],0])
-                        print("colp_pg1:   "+str(colp_pg1))
-                        print("colp_pg2:   "+str(colp_pg2))
-                        #if o1 == pg1:
-                        #    print("pg1")
-                        #if o1 == pg2:
-                        #    print("pg2")
-                        print("###############################")
-                        '''
-                        
-                        pendist = shortest_dist
-                        o1_xy_translate = multiply(o1.m/(o1.m+o2.m)*pendist,[unitvec_n[2*shortest_dist_index],unitvec_n[2*shortest_dist_index+1]])
-                        o2_xy_translate = multiply(o2.m/(o1.m+o2.m)*pendist,[unitvec_n[2*shortest_dist_index],unitvec_n[2*shortest_dist_index+1]])
-                        o1.coo1 = subtract( o1.coo1 , o1_xy_translate )
-                        o1.coo0 = subtract( o1.coo0 , o1_xy_translate )
-                        o1.coom1 = subtract( o1.coom1 , o1_xy_translate )
-                        for i in range(lo1h):
-                            o1.coovertex[2*i] = subtract( o1.coovertex[2*i] , o1_xy_translate[0] )
-                            o1.coovertex[2*i+1] = subtract( o1.coovertex[2*i+1] , o1_xy_translate[1] )
-                        
-                        o2.coo1 = add( o2.coo1 , o2_xy_translate )
-                        o2.coo0 = add( o2.coo0 , o2_xy_translate )
-                        o2.coom1 = add( o2.coom1 , o2_xy_translate )
-                        for i in range(lo2h):
-                            o2.coovertex[2*i] = add( o2.coovertex[2*i] , o2_xy_translate[0] )
-                            o2.coovertex[2*i+1] = add( o2.coovertex[2*i+1] , o2_xy_translate[1] )
-                        
+                    for l in range(lo2h):
+                        if distlinecross_list[l] > -1:
+                            filtered.append(distlinecross_list[l]) #WORK HERE WORK HERE WORK HERE WORK HERE
+                    if len(filtered) > 0:
+                        shortest_dist = min(filtered)
+
+
+                    #shortest_dist = min(dist_list)
+                    #shortest_dist_index = dist_list.index(shortest_dist)
+                    #colpx = int_list[2*shortest_dist_index]
+                    #colpy = int_list[2*shortest_dist_index+1]
+                    #####unitvec_n = o2.normals_local_rotated
+                    #####unitvec_t = o2.tangents_local_rotated
+
+                    ###########################################################################################################################
+                    ##### Collision event #####                    
+                    ###########################################################################################################################
+
+                    if colp_o1[i]==1: # if the current point (point i) of object1 is inside of object2
+                        #if ool_list[shortest_dist_index]==0:
+
+                        #create line to line intersection check here to see which o2 line has been penetrated WORK HERE
+                        #print("point_pg1:                 "+str(i))
+                        #print("lines crossed indexes:     "+str(linesegcrossed_o2_list))
+                        #print("line crossing coordinates: "+str(coolinecross_list))
+                        #viz.append( canvas_1.create_oval(o1.coo0[2*i]-3,o1.coo0[2*i+1]-3,o1.coo0[2*i]+3,[2*i+1]+3,fill="red",outline="red") )
+
+                        #if 1==1:
+                        if crossed>2: # ugly fix of ignoring when sometimes only one line segment crossing per object is detected (total segments less than 3, as mentioned above)
+                            
+                            shortest_dist_index = distlinecross_list.index(shortest_dist)
+                            #colpx = coolinecross_list[2*shortest_dist_index]
+                            #colpy = coolinecross_list[2*shortest_dist_index+1]
+                            #colpx = int_list[2*shortest_dist_index] #WORK HERE
+                            #colpy = int_list[2*shortest_dist_index+1] #WORK HERE
+                            colpx = point[0]
+                            colpy = point[1]
+
+                            print("index, shortest distance:  "+str(shortest_dist_index))
+                            print("shortest distance:         "+str(shortest_dist))
+                            print("obj1 line segm crossed:    "+str(linesegcrossed_o1_list))
+                            print("obj2 line segm crossed:    "+str(linesegcrossed_o2_list))
+                            print("obj1 w, h:                 "+str(o1.w)+", "+str(o1.h))
+                            print("obj2 w, h:                 "+str(o2.w)+", "+str(o2.h))
+                            #print("vertex x, vertex y:        "+str(colpx)+",   "+str(colpy))
+                            print("------------------------------------------------------------------------")
+
+                            ### DEBUG - WORK HERE WORK HERE WORK HERE
+                            if shortest_dist > 40:
+                                1==1 # Problems occur when only one line crossing is detected per object. One of the objects should always have 2.
+                            ###
+
+                            #canvas_1.create_oval(colpx-3,colpy-3,colpx+3,colpy+3,fill="green",outline="green")
+                            
+                            #Definition: Contact_line_line(o1,o2,coocol,unitvec_n,unitvec_t)
+                            Contact_line_line(o1,o2,[colpx,colpy,0],[unitvec_n[2*shortest_dist_index],unitvec_n[2*shortest_dist_index+1],0],[unitvec_t[2*shortest_dist_index],unitvec_t[2*shortest_dist_index+1],0]) # WORK HERE
+
+                            '''
+                            print("###############################")
+                            #print("i: "+str(i))
+                            print(shortest_dist_index)
+                            #print(colp_o1)
+                            print(dist_list)
+                            print(shortest_dist)
+                            print([unitvec_n[2*shortest_dist_index],unitvec_n[2*shortest_dist_index+1],0])
+                            print([unitvec_t[2*shortest_dist_index],unitvec_t[2*shortest_dist_index+1],0])
+                            print("colp_pg1:   "+str(colp_pg1))
+                            print("colp_pg2:   "+str(colp_pg2))
+                            #if o1 == pg1:
+                            #    print("pg1")
+                            #if o1 == pg2:
+                            #    print("pg2")
+                            print("###############################")
+                            '''
+                            
+                            pendist = shortest_dist
+                            o1_xy_translate = multiply(o1.m/(o1.m+o2.m)*pendist,[unitvec_n[2*shortest_dist_index],unitvec_n[2*shortest_dist_index+1]])
+                            o2_xy_translate = multiply(o2.m/(o1.m+o2.m)*pendist,[unitvec_n[2*shortest_dist_index],unitvec_n[2*shortest_dist_index+1]])
+                            o1.coo1 = subtract( o1.coo1 , o1_xy_translate )
+                            o1.coo0 = subtract( o1.coo0 , o1_xy_translate )
+                            o1.coom1 = subtract( o1.coom1 , o1_xy_translate )
+                            for m in range(lo1h):
+                                o1.coovertex[2*m] = subtract( o1.coovertex[2*m] , o1_xy_translate[0] )
+                                o1.coovertex[2*m+1] = subtract( o1.coovertex[2*m+1] , o1_xy_translate[1] )
+                            
+                            o2.coo1 = add( o2.coo1 , o2_xy_translate )
+                            o2.coo0 = add( o2.coo0 , o2_xy_translate )
+                            o2.coom1 = add( o2.coom1 , o2_xy_translate )
+                            for m in range(lo2h):
+                                o2.coovertex[2*m] = add( o2.coovertex[2*m] , o2_xy_translate[0] )
+                                o2.coovertex[2*m+1] = add( o2.coovertex[2*m+1] , o2_xy_translate[1] )
+                            
+                    ###########################################################################################################################
+
                         
                         
                         
@@ -2054,8 +2302,8 @@ class Object_Box:
         #self.coo1 = [x,y]
         self.coo0 = self.coo1
         self.coom1 = self.coo1
-        self.theta1 = 0.15
-        self.theta0 = 0.15
+        self.theta1 = 0
+        self.theta0 = 0
         self.thetam1 = self.theta1
         self.ecc_u = ecc_u
         self.ecc_v = ecc_v
@@ -2063,6 +2311,7 @@ class Object_Box:
         #self.coovertexloc = [ -0.5*w , -0.5*h , 0.5*w , -0.5*h , 0.5*w , 0.5*h , -0.5*w , 0.5*h ]
         self.coovertexlocrot = Rotxypairsinvec(self.coovertexloc,self.theta1)
         self.coovertex = [ self.coo1[0]+self.coovertexlocrot[0] , self.coo1[1]+self.coovertexlocrot[1] , self.coo1[0]+self.coovertexlocrot[2] , self.coo1[1]+self.coovertexlocrot[3] , self.coo1[0]+self.coovertexlocrot[4] , self.coo1[1]+self.coovertexlocrot[5] , self.coo1[0]+self.coovertexlocrot[6] , self.coo1[1]+self.coovertexlocrot[7] ]
+        self.n_linesegments = len(self.coovertex)*0.5
 
         # calculate point furthest away from center of mass (for contact search)
         com_to_A = sqrt( (self.coovertexloc[0])**2 + (self.coovertexloc[1])**2 )
@@ -2159,6 +2408,12 @@ class Object_Box:
         self.lineDA = self.canvas.create_line( self.coovertex[6],self.coovertex[7],self.coovertex[0],self.coovertex[1] )
         self.ball = self.canvas.create_oval( self.coo1[0]-3,self.coo1[1]-3,self.coo1[0]+3,self.coo1[1]+3,outline="grey",fill="grey" )
 
+    def linesegment(self,n):
+        if n == (self.n_linesegments-1): # if i is at the last xy-pair in the list
+            n_output = [self.coovertex[2*n],self.coovertex[2*n+1],self.coovertex[0],self.coovertex[1]]
+        else: # else, count as usual
+            n_output = [self.coovertex[2*n],self.coovertex[2*n+1],self.coovertex[2*n+2],self.coovertex[2*n+3]]
+        return n_output
 
     def draw(self):
         '''
@@ -2662,6 +2917,10 @@ canvas_1.bind('<Motion>', motion)
 #Testkommentar för githubcommit
 
 ## ATT GÖRA:
+# contact polygon to polygon - FUNKAR
+#   - endast en kontakt per polygon funkar just nu
+# contact ball to polygon
+# gör om alla bounding boxes till fyrkanter istället för cirklar (sqrt är långsam)
 # initial angle 
 # initial angular velocity
 # initial velocity
