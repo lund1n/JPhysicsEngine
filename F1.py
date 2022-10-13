@@ -49,7 +49,7 @@ colcounter = 0
 debug_col_lines = 0
 
 t_elapsed = 0
-dt = 0.015
+dt = 0.05 #0.015
 
 dtr = canvas_1.create_text(10,20,text="dt = "+str(dt),font=("arial",8),anchor=SW)
 t_elapsedr = canvas_1.create_text(10,30,text="t = "+str(round(t_elapsed,9)),font=("arial",8),anchor=SW)
@@ -651,7 +651,7 @@ def Check_CollisionType(o1,o2):
             Collision_Line_FixedLine(o2,o1)
             return
         if isinstance(o2, Object_Polygon):
-            Collision_Box_FixedLine(o2,o1)
+            Collision_Polygon_FixedLine(o2,o1)
             return
 
     if isinstance(o1, Object_Line):
@@ -670,7 +670,7 @@ def Check_CollisionType(o1,o2):
 
     if isinstance(o1, Object_Polygon):
         if isinstance(o2, Object_FixedLine):
-            Collision_Box_FixedLine(o1,o2)
+            Collision_Polygon_FixedLine(o1,o2)
             return
         if isinstance(o2, Object_Line):
             Collision_Box_Line(o1,o2)
@@ -1380,10 +1380,14 @@ def Collision_Box_Line(box,line):
 
     if sqrt( (box.coo0[0]-line.coo0[0])**2 + (box.coo0[1]-line.coo0[1])**2 ) <= (box.r + line.r + r_pinball):
 
-        indices = [ [0,1,2,3] , [2,3,4,5] , [4,5,6,7] , [6,7,0,1] ]
+        #indices = [ [0,1,2,3] , [2,3,4,5] , [4,5,6,7] , [6,7,0,1] ]
 
-        for i in range(0,len(indices)):
-            boxline_active = [box.coovertex[ indices[i][0] ],box.coovertex[ indices[i][1] ],box.coovertex[ indices[i][2] ],box.coovertex[ indices[i][3] ]]
+        for i in range(0,box.n_linesegments):
+            #boxline_active = [box.coovertex[ indices[i][0] ],box.coovertex[ indices[i][1] ],box.coovertex[ indices[i][2] ],box.coovertex[ indices[i][3] ]]
+            if i == (box.n_linesegments-1): # if i is at the last xy-pair in the list
+                boxline_active = [box.coovertex[2*i],box.coovertex[2*i+1],box.coovertex[0],box.coovertex[1]]
+            else: # else, count as usual
+                boxline_active = [box.coovertex[2*i],box.coovertex[2*i+1],box.coovertex[2*i+2],box.coovertex[2*i+3]]
 
             coocol_lineA = ClosestPointOnLineSegmentEdgeIndicator(line.coovertex[0],line.coovertex[1],boxline_active)
             coocol_lineB = ClosestPointOnLineSegmentEdgeIndicator(line.coovertex[2],line.coovertex[3],boxline_active)
@@ -1413,7 +1417,10 @@ def Collision_Box_Line(box,line):
                 box.coo1 = add( box.coo1 , multiply(box.m/(box.m+line.m)*pendist,[unitvec_n[0],unitvec_n[1]]) )
                 box.coo0 = add( box.coo0 , multiply(box.m/(box.m+line.m)*pendist,[unitvec_n[0],unitvec_n[1]]) )
                 box.coom1 = add( box.coom1 , multiply(box.m/(box.m+line.m)*pendist,[unitvec_n[0],unitvec_n[1]]) )
-                box.coovertex = add( box.coovertex , multiply(box.m/(box.m+line.m)*pendist,[unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1]]) )
+                #box.coovertex = add( box.coovertex , multiply(box.m/(box.m+line.m)*pendist,[unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1]]) )
+                for j in range(box.n_linesegments):
+                    box.coovertex[2*j] = box.coovertex[2*j] + unitvec_n[0]*(box.m/(box.m+line.m)*pendist)
+                    box.coovertex[2*j+1] = box.coovertex[2*j+1] + unitvec_n[1]*(box.m/(box.m+line.m)*pendist)
 
                 line.coo1 = subtract( line.coo1 , multiply(line.m/(box.m+line.m)*pendist, [unitvec_n[0],unitvec_n[1]] ))
                 line.coo0 = subtract( line.coo0 , multiply(line.m/(box.m+line.m)*pendist, [unitvec_n[0],unitvec_n[1]] ))
@@ -1431,7 +1438,10 @@ def Collision_Box_Line(box,line):
                 box.coo1 = add( box.coo1 , multiply(box.m/(box.m+line.m)*pendist,[unitvec_n[0],unitvec_n[1]]) )
                 box.coo0 = add( box.coo0 , multiply(box.m/(box.m+line.m)*pendist,[unitvec_n[0],unitvec_n[1]]) )
                 box.coom1 = add( box.coom1 , multiply(box.m/(box.m+line.m)*pendist,[unitvec_n[0],unitvec_n[1]]) )
-                box.coovertex = add( box.coovertex , multiply(box.m/(box.m+line.m)*pendist,[unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1]]) )
+                #box.coovertex = add( box.coovertex , multiply(box.m/(box.m+line.m)*pendist,[unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1]]) )
+                for j in range(box.n_linesegments):
+                    box.coovertex[2*j] = box.coovertex[2*j] + unitvec_n[0]*(box.m/(box.m+line.m)*pendist)
+                    box.coovertex[2*j+1] = box.coovertex[2*j+1] + unitvec_n[1]*(box.m/(box.m+line.m)*pendist)
 
                 line.coo1 = subtract( line.coo1 , multiply(line.m/(box.m+line.m)*pendist, [unitvec_n[0],unitvec_n[1]] ))
                 line.coo0 = subtract( line.coo0 , multiply(line.m/(box.m+line.m)*pendist, [unitvec_n[0],unitvec_n[1]] ))
@@ -1448,7 +1458,10 @@ def Collision_Box_Line(box,line):
                 box.coo1 = add( box.coo1 , multiply(box.m/(box.m+line.m)*pendist,[unitvec_n[0],unitvec_n[1]]) )
                 box.coo0 = add( box.coo0 , multiply(box.m/(box.m+line.m)*pendist,[unitvec_n[0],unitvec_n[1]]) )
                 box.coom1 = add( box.coom1 , multiply(box.m/(box.m+line.m)*pendist,[unitvec_n[0],unitvec_n[1]]) )
-                box.coovertex = add( box.coovertex , multiply(box.m/(box.m+line.m)*pendist,[unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1]]) )
+                #box.coovertex = add( box.coovertex , multiply(box.m/(box.m+line.m)*pendist,[unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1]]) )
+                for j in range(box.n_linesegments):
+                    box.coovertex[2*j] = box.coovertex[2*j] + unitvec_n[0]*(box.m/(box.m+line.m)*pendist)
+                    box.coovertex[2*j+1] = box.coovertex[2*j+1] + unitvec_n[1]*(box.m/(box.m+line.m)*pendist)
 
                 line.coo1 = subtract( line.coo1 , multiply(line.m/(box.m+line.m)*pendist, [unitvec_n[0],unitvec_n[1]] ))
                 line.coo0 = subtract( line.coo0 , multiply(line.m/(box.m+line.m)*pendist, [unitvec_n[0],unitvec_n[1]] ))
@@ -1932,7 +1945,7 @@ def Collision_Box_Box_OLD(box1,box2):
                     box2.coovertex = subtract( box2.coovertex , multiply(box2.m/(box1.m+box2.m)*pendist, [unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1]] ))
                 '''
 
-def Collision_Box_FixedLine(box,fl):
+def Collision_Polygon_FixedLine(box,fl):
     
     r_pinball = fl.hhalf
 
@@ -1940,10 +1953,16 @@ def Collision_Box_FixedLine(box,fl):
 
     if sqrt( (box.coo0[0]-fl.coo0[0])**2 + (box.coo0[1]-fl.coo0[1])**2 ) <= (box.r + fl.r + r_pinball):
 
-        indices = [ [0,1,2,3] , [2,3,4,5] , [4,5,6,7] , [6,7,0,1] ]
+        #indices = [ [0,1,2,3] , [2,3,4,5] , [4,5,6,7] , [6,7,0,1] ]
 
-        for i in range(0,len(indices)):
-            boxline_active = [box.coovertex[ indices[i][0] ],box.coovertex[ indices[i][1] ],box.coovertex[ indices[i][2] ],box.coovertex[ indices[i][3] ]]
+        #for i in range(0,len(indices)):
+        for i in range(0,box.n_linesegments):
+            #boxline_active = [box.coovertex[ indices[i][0] ],box.coovertex[ indices[i][1] ],box.coovertex[ indices[i][2] ],box.coovertex[ indices[i][3] ]]
+            if i == (box.n_linesegments-1): # if i is at the last xy-pair in the list
+                boxline_active = [box.coovertex[2*i],box.coovertex[2*i+1],box.coovertex[0],box.coovertex[1]]
+            else: # else, count as usual
+                boxline_active = [box.coovertex[2*i],box.coovertex[2*i+1],box.coovertex[2*i+2],box.coovertex[2*i+3]]
+
 
             coocol_flA = ClosestPointOnLineSegmentEdgeIndicator(fl.coovertex[0],fl.coovertex[1],boxline_active)
             coocol_flB = ClosestPointOnLineSegmentEdgeIndicator(fl.coovertex[2],fl.coovertex[3],boxline_active)
@@ -1978,9 +1997,11 @@ def Collision_Box_FixedLine(box,fl):
                 box.coo1 = box.coo1 + multiply([unitvec_n[0],unitvec_n[1]],(r_pinball-distint_boxA))
                 box.coo0 = box.coo0 + multiply([unitvec_n[0],unitvec_n[1]],(r_pinball-distint_boxA))
                 box.coom1 = box.coom1 + multiply([unitvec_n[0],unitvec_n[1]],(r_pinball-distint_boxA))
-                #box.cooA = box.cooA + multiply([unitvec_n[0],unitvec_n[1]],fac*(r_pinball-distint_boxA))
-                #box.cooB = box.cooB + multiply([unitvec_n[0],unitvec_n[1]],fac*(r_pinball-distint_boxA))
-                box.coovertex = box.coovertex + multiply([unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1]],(r_pinball-distint_boxA))
+
+                #box.coovertex = box.coovertex + multiply([unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1]],(r_pinball-distint_boxA))
+                for j in range(box.n_linesegments):
+                    box.coovertex[2*j] = box.coovertex[2*j] + unitvec_n[0]*(r_pinball-distint_boxA)
+                    box.coovertex[2*j+1] = box.coovertex[2*j+1] + unitvec_n[1]*(r_pinball-distint_boxA)
 
                 #colcounter = colcounter + 1
                 #print(str(colcounter)+" - boxline "+str(i)+", edge A, indicator "+str(coocol_boxA[3]))
@@ -2012,9 +2033,11 @@ def Collision_Box_FixedLine(box,fl):
                 box.coo1 = box.coo1 + multiply([unitvec_n[0],unitvec_n[1]],(r_pinball-distint_flA))
                 box.coo0 = box.coo0 + multiply([unitvec_n[0],unitvec_n[1]],(r_pinball-distint_flA))
                 box.coom1 = box.coom1 + multiply([unitvec_n[0],unitvec_n[1]],(r_pinball-distint_flA))
-                #box.cooA = box.cooA + multiply([unitvec_n[0],unitvec_n[1]],fac*(r_pinball-distint_flA))
-                #box.cooB = box.cooB + multiply([unitvec_n[0],unitvec_n[1]],fac*(r_pinball-distint_flA))
-                box.coovertex = box.coovertex + multiply([unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1]],(r_pinball-distint_flA))
+                
+                #box.coovertex = box.coovertex + multiply([unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1]],(r_pinball-distint_flA))
+                for j in range(box.n_linesegments):
+                    box.coovertex[2*j] = box.coovertex[2*j] + unitvec_n[0]*(r_pinball-distint_boxA)
+                    box.coovertex[2*j+1] = box.coovertex[2*j+1] + unitvec_n[1]*(r_pinball-distint_boxA)
 
                 #colcounter = colcounter + 1
                 #print(str(colcounter)+" - flA - "+str(coocol_flA[3]))
@@ -2028,9 +2051,11 @@ def Collision_Box_FixedLine(box,fl):
                 box.coo1 = box.coo1 + multiply([unitvec_n[0],unitvec_n[1]],(r_pinball-distint_flB))
                 box.coo0 = box.coo0 + multiply([unitvec_n[0],unitvec_n[1]],(r_pinball-distint_flB))
                 box.coom1 = box.coom1 + multiply([unitvec_n[0],unitvec_n[1]],(r_pinball-distint_flB))
-                #box.cooA = box.cooA + multiply([unitvec_n[0],unitvec_n[1]],fac*(r_pinball-distint_flB))
-                #box.cooB = box.cooB + multiply([unitvec_n[0],unitvec_n[1]],fac*(r_pinball-distint_flB))
-                box.coovertex = box.coovertex + multiply([unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1]],(r_pinball-distint_flB))
+                
+                #box.coovertex = box.coovertex + multiply([unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1]],(r_pinball-distint_flB))
+                for j in range(box.n_linesegments):
+                    box.coovertex[2*j] = box.coovertex[2*j] + unitvec_n[0]*(r_pinball-distint_boxA)
+                    box.coovertex[2*j+1] = box.coovertex[2*j+1] + unitvec_n[1]*(r_pinball-distint_boxA)
 
                 #colcounter = colcounter + 1
                 #print(str(colcounter)+" - flB - "+str(coocol_flB[3]))
@@ -2874,7 +2899,7 @@ obj.append(Object_ShowPhysics(canvas_1,obj[36]))
 obj.append(Object_Line(canvas_1,350,500,350,600,3.5,50,rho_rubber,0.5,0.5)) #270,150 | 390,70
 obj.append(Object_Line(canvas_1,355,350,350,450,3.5,50,rho_rubber,0.5,0.5)) #270,150 | 390,70
 
-obj.append(Object_Polygon(canvas_1,540,400,[-25,-20,25,-20,25,20,-25,20],40,rho_rubber,0.5,0.5,0.2,-0.3))
+obj.append(Object_Polygon(canvas_1,540,400,[-25,-20,25,-20,25,20,5,9,-25,20],40,rho_rubber,0.5,0.5,0.2,-0.3))
 obj.append(Object_Polygon(canvas_1,550,330,[-35,-10,35,-10,35,10,-35,10],40,rho_rubber,0.5,0.5,-0.3,0.1))
 
 x_m = 0
