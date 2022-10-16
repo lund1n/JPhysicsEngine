@@ -49,7 +49,7 @@ colcounter = 0
 debug_col_lines = 0
 
 t_elapsed = 0
-dt = 0.05 #0.015
+dt = 0.002 #0.015
 
 dtr = canvas_1.create_text(10,20,text="dt = "+str(dt),font=("arial",8),anchor=SW)
 t_elapsedr = canvas_1.create_text(10,30,text="t = "+str(round(t_elapsed,9)),font=("arial",8),anchor=SW)
@@ -145,6 +145,9 @@ def Crossprod_vec3(v,w):
 def Matmultcol(M,v):
     return [M[0][0]*v[0] , M[1][1]*v[1] , M[2][2]*v[2]]
 
+def Dotprod_vec2(v,w):
+    return v[0]*w[0]+v[1]*w[1]
+
 def Scalarproj_vec3(v,w):
     return Safediv( (v[0]*w[0] + v[1]*w[1] + v[2]*w[2]) , sqrt(w[0]**2 + w[1]**2 + w[2]**2) )
 
@@ -202,7 +205,7 @@ def ClosestPointOnLineSegment(px,py,line):
     return p
 ###
 
-def ClosestPointOnLineSegmentEdgeIndicator(px,py,line):
+def ClosestPointOnLineSegmentAbsDist(px,py,line): #WORK HERE - mata in angle så du slipper räkna ut det varje gång?
     '''
     cooint = [0,0,0]
     # Distance
@@ -259,7 +262,7 @@ def ClosestPointOnLineSegmentEdgeIndicator(px,py,line):
     #return cooint
     return [ p[0] , p[1] , distint, p_outside_of_line_edges ]
 
-def ClosestPointOnLineBoundary(px,py,line,gcx,gcy,t): # WORK HERE
+def ClosestPointOnLineSegmentPerpDist(px,py,line,gcx,gcy,t): # WORK HERE
     '''
     cooint = [0,0,0]
     # Distance
@@ -402,7 +405,7 @@ def ClosestPointOnLineBoundary(px,py,line,gcx,gcy,t): # WORK HERE
     return [ p[0] , p[1] , distpen, p_outside_of_line_edges, dist_dyngc_int ]
 
 
-def ClosestPointOnLineBoundary2(px,py,line,angle): # WORK HERE
+def ClosestPointOnLineSegmentPerpDist2(px,py,line,angle): # WORK HERE
     
     theta_obj = angle
     #theta_obj = arctan( Safediv( line[3]-line[1] , line[2]-line[0] ) )
@@ -496,16 +499,33 @@ def Pointinsidepolygoncheck(pointcoo,polygoncoo):
         
     return point_inside_polygon
 
+def Ballinsidepolygoncheck(polygon,pointcoo,polygoncoo,ballradius,linenormals): #THIS NEEDS WORK. IT FAILS WITH CONCAVE POLYGONS.
 
-def Ballinsidepolygoncheck(pointcoo,polygoncoo,ballradius,lineangles,linenormals):
+    point_inside_polygon = 1
+
+    for i in range(polygon.n_linesegments):
+        if i == (polygon.n_linesegments-1): # if i is at the last xy-pair in the list
+            line = [polygoncoo[2*i],polygoncoo[2*i+1],polygoncoo[0],polygoncoo[1]]
+        else: # else, count as usual
+            line = [polygoncoo[2*i],polygoncoo[2*i+1],polygoncoo[2*i+2],polygoncoo[2*i+3]]
+
+        point = [ pointcoo[0]-line[0]+ballradius*linenormals[2*i] , pointcoo[1]-line[1]+ballradius*linenormals[2*i+1] ]
+        dp = Dotprod_vec2( point , [linenormals[2*i],linenormals[2*i+1]] )
+
+        if dp < 0:
+            point_inside_polygon = 0
+
+    return point_inside_polygon
+
+def BallinsidepolygoncheckOLD(polygon,pointcoo,polygoncoo,ballradius,lineangles,linenormals):
 
     #inside_or_outside_checklist = (len(polygoncoo)/2)*[0] # create a list entry for every line in the polygon
     point_inside_polygon = 0
     ints_h = 0
     ints_v = 0
 
-    for i in range(int(len(polygoncoo)/2)):
-        if i == (int(len(polygoncoo)/2)-1): # if i is at the last xy-pair in the list
+    for i in range(polygon.n_linesegments):
+        if i == (polygon.n_linesegments-1): # if i is at the last xy-pair in the list
             line = [polygoncoo[2*i],polygoncoo[2*i+1],polygoncoo[0],polygoncoo[1]]
         else: # else, count as usual
             line = [polygoncoo[2*i],polygoncoo[2*i+1],polygoncoo[2*i+2],polygoncoo[2*i+3]]
@@ -908,7 +928,7 @@ def Collision_Ball_Ball(b1,b2):
 
 def Collision_Ball_FixedLine(ball,line):
     # Coordinates of intersection point
-    coocol = ClosestPointOnLineSegmentEdgeIndicator(ball.coo1[0],ball.coo1[1],line.coovertex)
+    coocol = ClosestPointOnLineSegmentAbsDist(ball.coo1[0],ball.coo1[1],line.coovertex)
     # Distance between object and intersection point
     distint2 = sqrt( (coocol[0]-ball.coo1[0])**2 + (coocol[1]-ball.coo1[1])**2 ) # distance between point and fixline
     distint = coocol[2]
@@ -932,7 +952,7 @@ def Collision_Ball_FixedLine(ball,line):
 
 def Collision_Ball_Line(ball,line):
     # Coordinates of intersection point
-    coocol = ClosestPointOnLineSegmentEdgeIndicator(ball.coo1[0],ball.coo1[1],line.coovertex)
+    coocol = ClosestPointOnLineSegmentAbsDist(ball.coo1[0],ball.coo1[1],line.coovertex)
     # Distance between object and intersection point
     #distint = sqrt( (coocol[0]-ball.coo1[0])**2 + (coocol[1]-ball.coo1[1])**2 ) # distance between point and fixline
     distint = coocol[2]
@@ -970,10 +990,10 @@ def Collision_Line_Line(l1,l2):
 
     if sqrt( (l1.coo0[0]-l2.coo0[0])**2 + (l1.coo0[1]-l2.coo0[1])**2 ) <= (l1.r + l2.r + r_pinball):
 
-        coocol_l1A = ClosestPointOnLineSegmentEdgeIndicator(l1.coovertex[0],l1.coovertex[1],l2.coovertex)
-        coocol_l1B = ClosestPointOnLineSegmentEdgeIndicator(l1.coovertex[2],l1.coovertex[3],l2.coovertex)
-        coocol_l2A = ClosestPointOnLineSegmentEdgeIndicator(l2.coovertex[0],l2.coovertex[1],l1.coovertex)
-        coocol_l2B = ClosestPointOnLineSegmentEdgeIndicator(l2.coovertex[2],l2.coovertex[3],l1.coovertex)
+        coocol_l1A = ClosestPointOnLineSegmentAbsDist(l1.coovertex[0],l1.coovertex[1],l2.coovertex)
+        coocol_l1B = ClosestPointOnLineSegmentAbsDist(l1.coovertex[2],l1.coovertex[3],l2.coovertex)
+        coocol_l2A = ClosestPointOnLineSegmentAbsDist(l2.coovertex[0],l2.coovertex[1],l1.coovertex)
+        coocol_l2B = ClosestPointOnLineSegmentAbsDist(l2.coovertex[2],l2.coovertex[3],l1.coovertex)
         distint_l1A = coocol_l1A[2]
         distint_l1B = coocol_l1B[2]
         distint_l2A = coocol_l2A[2]
@@ -1092,10 +1112,10 @@ def Collision_Line_FixedLine(line,fl):
 
     if sqrt( (line.coo0[0]-fl.coo0[0])**2 + (line.coo0[1]-fl.coo0[1])**2 ) <= (line.r + fl.r + r_pinball):
 
-        coocol_box2_lineA = ClosestPointOnLineSegmentEdgeIndicator(line.coovertex[0],line.coovertex[1],fl.coovertex)
-        coocol_box2_lineB = ClosestPointOnLineSegmentEdgeIndicator(line.coovertex[2],line.coovertex[3],fl.coovertex)
-        coocol_flA = ClosestPointOnLineSegmentEdgeIndicator(fl.coovertex[0],fl.coovertex[1],line.coovertex)
-        coocol_flB = ClosestPointOnLineSegmentEdgeIndicator(fl.coovertex[2],fl.coovertex[3],line.coovertex)
+        coocol_box2_lineA = ClosestPointOnLineSegmentAbsDist(line.coovertex[0],line.coovertex[1],fl.coovertex)
+        coocol_box2_lineB = ClosestPointOnLineSegmentAbsDist(line.coovertex[2],line.coovertex[3],fl.coovertex)
+        coocol_flA = ClosestPointOnLineSegmentAbsDist(fl.coovertex[0],fl.coovertex[1],line.coovertex)
+        coocol_flB = ClosestPointOnLineSegmentAbsDist(fl.coovertex[2],fl.coovertex[3],line.coovertex)
         distint_lineA = coocol_box2_lineA[2]
         distint_lineB = coocol_box2_lineB[2]
         distint_flA = coocol_flA[2]
@@ -1218,17 +1238,25 @@ def Collision_Line_FixedLine(line,fl):
 def Collision_Ball_Polygon(ball,polygon):
 
     if sqrt( (ball.coo0[0]-polygon.coo0[0])**2 + (ball.coo0[1]-polygon.coo0[1])**2 ) <= (ball.r + polygon.r):
-        len_polygon = len(polygon.coovertex)
-        len_polygon_half = int(len(polygon.coovertex)/2)
 
-        check_ball = Ballinsidepolygoncheck([ball.coo1[0],ball.coo1[1]],polygon.coovertex,ball.r,polygon.angles_local_rotated,polygon.normals_local_rotated)
-        #check_ball = Pointinsidepolygoncheck([ball.coo1[0],ball.coo1[1]],polygon.coovertex)
+        len_polygon = 2*polygon.n_linesegments
+        len_polygon_half = polygon.n_linesegments
+
+        #bip = Ballinsidepolygoncheck(polygon,[ball.coo1[0],ball.coo1[1]],polygon.coovertex,ball.r,polygon.angles_local_rotated,polygon.normals_local_rotated)
+        #the bip below seems to NOT work
+        #bip = Ballinsidepolygoncheck(polygon,[ball.coo1[0],ball.coo1[1]],polygon.coovertex,ball.r,polygon.normals_local_rotated)
+        #the bip below works
+        bip = Pointinsidepolygoncheck([ball.coo1[0],ball.coo1[1]],polygon.coovertex)
 
         polygon_unitvec_n = polygon.normals_local_rotated
         polygon_unitvec_t = polygon.tangents_local_rotated
 
-        if check_ball > 0: # if a point/vertex of ball is inside of polygon
-            
+        #if bip > 0: # if a point/vertex of ball is inside of polygon
+        if 1==1:
+
+            #print(1)
+            #print(2)
+            #print("---")
 
             point = [ball.coo1[0],ball.coo1[1]]
 
@@ -1245,7 +1273,8 @@ def Collision_Ball_Polygon(ball,polygon):
                 
                 line_angle = polygon.angles_local_rotated[j]
 
-                cooint = ClosestPointOnLineBoundary2(point[0],point[1],line,line_angle)
+                cooint = ClosestPointOnLineSegmentAbsDist(point[0],point[1],line)
+                #cooint = ClosestPointOnLineSegmentPerpDist2(point[0],point[1],line,line_angle)
                 dist_list[j] = cooint[2] # store distance of closest point of o1 point on the o2 line
                 int_list[2*j] = cooint[0] # store x coordinate of closest point of o1 point on the o2 line
                 int_list[2*j+1] = cooint[1] # store y coordinate of closest point of o1 point on the o2 line
@@ -1259,7 +1288,29 @@ def Collision_Ball_Polygon(ball,polygon):
             #colpx = colpx + polygon_unitvec_n[2*shortest_dist_index]*ball.r
             #colpy = colpy + polygon_unitvec_n[2*shortest_dist_index+1]*ball.r
             
-            if ool_list[shortest_dist_index]==0:
+            '''
+            print("dist_list")
+            print(dist_list)
+            print("shortest dist")
+            print(shortest_dist)
+            print("shortest dist index")
+            print(shortest_dist_index)
+            print("ool_list")
+            print(ool_list)
+            print("ool_list shortest distance index")
+            print(ool_list[shortest_dist_index])
+            print("---------------------")
+            '''
+
+            #if ool_list[shortest_dist_index]==0:
+            #if 1==1:
+            if shortest_dist <= ball.r or bip:
+                print("shortest dist")
+                print(shortest_dist)
+                print("ball.r")
+                print(ball.r)
+                print("ool_list shortest distance index")
+                print(ool_list[shortest_dist_index])
                 #canvas_1.create_oval(colpx-3,colpy-3,colpx+3,colpy+3,fill="green",outline="green")
                 Contact_line_line(ball,polygon,[colpx,colpy,0],[polygon_unitvec_n[2*shortest_dist_index],polygon_unitvec_n[2*shortest_dist_index+1],0],[polygon_unitvec_t[2*shortest_dist_index],polygon_unitvec_t[2*shortest_dist_index+1],0]) # WORK HERE
 
@@ -1281,7 +1332,7 @@ def Collision_Ball_Polygon(ball,polygon):
                 print("###############################")
                 '''
                 
-                pendist = shortest_dist
+                pendist = ball.r - shortest_dist
                 ball_xy_translate = multiply(ball.m/(ball.m+polygon.m)*pendist,[polygon_unitvec_n[2*shortest_dist_index],polygon_unitvec_n[2*shortest_dist_index+1]])
                 polygon_xy_translate = multiply(polygon.m/(ball.m+polygon.m)*pendist,[polygon_unitvec_n[2*shortest_dist_index],polygon_unitvec_n[2*shortest_dist_index+1]])
                 ball.coo1 = subtract( ball.coo1 , ball_xy_translate )
@@ -1306,10 +1357,10 @@ def Collision_Ball_Box(box,ball):
         for i in range(0,len(indices)):
             boxline_active = [box.coovertex[ indices[i][0] ],box.coovertex[ indices[i][1] ],box.coovertex[ indices[i][2] ],box.coovertex[ indices[i][3] ]]
 
-            #coocol_ball = ClosestPointOnLineSegmentEdgeIndicator(ball.coo1[0],ball.coo1[1],boxline_active)
+            #coocol_ball = ClosestPointOnLineSegmentAbsDist(ball.coo1[0],ball.coo1[1],boxline_active)
             #distint_ball = coocol_ball[2]
 
-            coocol_ball = ClosestPointOnLineBoundary(ball.coo1[0],ball.coo1[1],boxline_active,box.coo_geom_center[0],box.coo_geom_center[1],ball.r)
+            coocol_ball = ClosestPointOnLineSegmentPerpDist(ball.coo1[0],ball.coo1[1],boxline_active,box.coo_geom_center[0],box.coo_geom_center[1],ball.r)
             distpen_ball = coocol_ball[2]
             dist_ballgc_int = coocol_ball[4]
 
@@ -1353,7 +1404,7 @@ def Collision_Ball_Box_OLD(box,ball):
         for i in range(0,len(indices)):
             boxline_active = [box.coovertex[ indices[i][0] ],box.coovertex[ indices[i][1] ],box.coovertex[ indices[i][2] ],box.coovertex[ indices[i][3] ]]
 
-            coocol_ball = ClosestPointOnLineSegmentEdgeIndicator(ball.coo1[0],ball.coo1[1],boxline_active)
+            coocol_ball = ClosestPointOnLineSegmentAbsDist(ball.coo1[0],ball.coo1[1],boxline_active)
             distint_ball = coocol_ball[2]
 
             if distint_ball <= r_pinball and coocol_ball[3]==0:
@@ -1389,13 +1440,13 @@ def Collision_Box_Line(box,line):
             else: # else, count as usual
                 boxline_active = [box.coovertex[2*i],box.coovertex[2*i+1],box.coovertex[2*i+2],box.coovertex[2*i+3]]
 
-            coocol_lineA = ClosestPointOnLineSegmentEdgeIndicator(line.coovertex[0],line.coovertex[1],boxline_active)
-            coocol_lineB = ClosestPointOnLineSegmentEdgeIndicator(line.coovertex[2],line.coovertex[3],boxline_active)
+            coocol_lineA = ClosestPointOnLineSegmentAbsDist(line.coovertex[0],line.coovertex[1],boxline_active)
+            coocol_lineB = ClosestPointOnLineSegmentAbsDist(line.coovertex[2],line.coovertex[3],boxline_active)
             distint_lineA = coocol_lineA[2]
             distint_lineB = coocol_lineB[2]
 
-            coocol_boxA = ClosestPointOnLineSegmentEdgeIndicator(boxline_active[0],boxline_active[1],line.coovertex)
-            coocol_boxB = ClosestPointOnLineSegmentEdgeIndicator(boxline_active[2],boxline_active[3],line.coovertex)
+            coocol_boxA = ClosestPointOnLineSegmentAbsDist(boxline_active[0],boxline_active[1],line.coovertex)
+            coocol_boxB = ClosestPointOnLineSegmentAbsDist(boxline_active[2],boxline_active[3],line.coovertex)
             distint_boxA = coocol_boxA[2]
             distint_boxB = coocol_boxB[2]
 
@@ -1568,7 +1619,7 @@ def Collision_Polygon_Polygon(pg1,pg2):
                         
                         line2_angle = o2.angles_local_rotated[j]
 
-                        cooint = ClosestPointOnLineBoundary2(point[0],point[1],line2,line2_angle)
+                        cooint = ClosestPointOnLineSegmentPerpDist2(point[0],point[1],line2,line2_angle)
                         int_list[2*j] = cooint[0] # store x coordinate of closest point to o1 point on the o2 line
                         int_list[2*j+1] = cooint[1] # store y coordinate of closest point to o1 point on the o2 line
                         dist_list[j] = cooint[2] # store distance of closest point to o1 point on the o2 line
@@ -1591,7 +1642,7 @@ def Collision_Polygon_Polygon(pg1,pg2):
                             crossed = crossed + 1 #crossed amount of unique line segments (NOT amount of crossings detected)
                     for k in range(lo2h): #which line crossing point is the closest? it determines the line whose normal shall be used
                         if linesegcrossed_o2_list[k] == 1: #if the line segment of polygon2 has been crossed by a line segment of polygon1
-                            cpolsei = ClosestPointOnLineSegmentEdgeIndicator(point[0],point[1],o2.linesegment(k))
+                            cpolsei = ClosestPointOnLineSegmentAbsDist(point[0],point[1],o2.linesegment(k))
                             distlinecross_list[k] = cpolsei[2] #record the distance to the penetrating point
                             crossed = crossed + 1 #crossed amount of unique line segments (NOT amount of crossings detected)
                         #we now check if both polygons have crossed line segments (as opposed to just o2 as originally) and increment the "crossed" variable,
@@ -1640,14 +1691,11 @@ def Collision_Polygon_Polygon(pg1,pg2):
                             colpx = point[0]
                             colpy = point[1]
 
-                            print("index, shortest distance:  "+str(shortest_dist_index))
-                            print("shortest distance:         "+str(shortest_dist))
-                            print("obj1 line segm crossed:    "+str(linesegcrossed_o1_list))
-                            print("obj2 line segm crossed:    "+str(linesegcrossed_o2_list))
-                            #print("obj1 w, h:                 "+str(o1.w)+", "+str(o1.h))
-                            #print("obj2 w, h:                 "+str(o2.w)+", "+str(o2.h))
-                            #print("vertex x, vertex y:        "+str(colpx)+",   "+str(colpy))
-                            print("------------------------------------------------------------------------")
+                            #print("index, shortest distance:  "+str(shortest_dist_index))
+                            #print("shortest distance:         "+str(shortest_dist))
+                            #print("obj1 line segm crossed:    "+str(linesegcrossed_o1_list))
+                            #print("obj2 line segm crossed:    "+str(linesegcrossed_o2_list))
+                            #print("------------------------------------------------------------------------")
 
                             ### DEBUG - WORK HERE WORK HERE WORK HERE
                             if shortest_dist > 40:
@@ -1717,13 +1765,13 @@ def Collision_Box_Box_OLD(box1,box2):
                 box1line_active = [box1.coovertex[ indices[i][0] ],box1.coovertex[ indices[i][1] ],box1.coovertex[ indices[i][2] ],box1.coovertex[ indices[i][3] ]]
                 
 
-                coocol_box2_lineA = ClosestPointOnLineBoundary(box2line_active[0],box2line_active[1],box1line_active,box1.coo_geom_center[0],box1.coo_geom_center[1],0)
-                coocol_box2_lineB = ClosestPointOnLineBoundary(box2line_active[2],box2line_active[3],box1line_active,box1.coo_geom_center[0],box1.coo_geom_center[1],0)
+                coocol_box2_lineA = ClosestPointOnLineSegmentPerpDist(box2line_active[0],box2line_active[1],box1line_active,box1.coo_geom_center[0],box1.coo_geom_center[1],0)
+                coocol_box2_lineB = ClosestPointOnLineSegmentPerpDist(box2line_active[2],box2line_active[3],box1line_active,box1.coo_geom_center[0],box1.coo_geom_center[1],0)
                 distpen_box2_lineA = coocol_box2_lineA[2]
                 distpen_box2_lineB = coocol_box2_lineB[2]
 
-                coocol_box1_lineA = ClosestPointOnLineBoundary(box1line_active[0],box1line_active[1],box2line_active,box2.coo_geom_center[0],box2.coo_geom_center[1],0)
-                coocol_box1_lineB = ClosestPointOnLineBoundary(box1line_active[2],box1line_active[3],box2line_active,box2.coo_geom_center[0],box2.coo_geom_center[1],0)
+                coocol_box1_lineA = ClosestPointOnLineSegmentPerpDist(box1line_active[0],box1line_active[1],box2line_active,box2.coo_geom_center[0],box2.coo_geom_center[1],0)
+                coocol_box1_lineB = ClosestPointOnLineSegmentPerpDist(box1line_active[2],box1line_active[3],box2line_active,box2.coo_geom_center[0],box2.coo_geom_center[1],0)
                 distpen_box1_lineA = coocol_box1_lineA[2]
                 distpen_box1_lineB = coocol_box1_lineB[2]
 
@@ -1776,10 +1824,10 @@ def Collision_Box_Box_OLD(box1,box2):
                     #if ((box2line_active[1]/box2line_active[3])>0.95) and ((box2line_active[1]/box2line_active[3])<1.05) or ((box2line_active[3]/box2line_active[1])>0.95) and ((box2line_active[3]/box2line_active[1])<1.05):
                     #    print(2)
                     
-                    #acoocol_box1_lineA = ClosestPointOnLineBoundary(box1line_active[0],box1line_active[1],box2line_active,box2.coo_geom_center[0],box2.coo_geom_center[1])
-                    #acoocol_box1_lineB = ClosestPointOnLineBoundary(box1line_active[2],box1line_active[3],box2line_active,box2.coo_geom_center[0],box2.coo_geom_center[1])
-                    #acoocol_box2_lineA = ClosestPointOnLineBoundary(box2line_active[0],box2line_active[1],box1line_active,box1.coo_geom_center[0],box1.coo_geom_center[1])
-                    #acoocol_box2_lineB = ClosestPointOnLineBoundary(box2line_active[2],box2line_active[3],box1line_active,box1.coo_geom_center[0],box1.coo_geom_center[1])
+                    #acoocol_box1_lineA = ClosestPointOnLineSegmentPerpDist(box1line_active[0],box1line_active[1],box2line_active,box2.coo_geom_center[0],box2.coo_geom_center[1])
+                    #acoocol_box1_lineB = ClosestPointOnLineSegmentPerpDist(box1line_active[2],box1line_active[3],box2line_active,box2.coo_geom_center[0],box2.coo_geom_center[1])
+                    #acoocol_box2_lineA = ClosestPointOnLineSegmentPerpDist(box2line_active[0],box2line_active[1],box1line_active,box1.coo_geom_center[0],box1.coo_geom_center[1])
+                    #acoocol_box2_lineB = ClosestPointOnLineSegmentPerpDist(box2line_active[2],box2line_active[3],box1line_active,box1.coo_geom_center[0],box1.coo_geom_center[1])
                     
                     #print("distpen_box1_lineA "+str(distpen_box1_lineA))
                     #print("unitvec_n: "+str(unitvec_n))
@@ -1821,10 +1869,10 @@ def Collision_Box_Box_OLD(box1,box2):
                     #if ((box2line_active[1]/box2line_active[3])>0.95) and ((box2line_active[1]/box2line_active[3])<1.05) or ((box2line_active[3]/box2line_active[1])>0.95) and ((box2line_active[3]/box2line_active[1])<1.05):
                     #    print(2)
                     
-                    #acoocol_box1_lineA = ClosestPointOnLineBoundary(box1line_active[0],box1line_active[1],box2line_active,box2.coo_geom_center[0],box2.coo_geom_center[1])
-                    #acoocol_box1_lineB = ClosestPointOnLineBoundary(box1line_active[2],box1line_active[3],box2line_active,box2.coo_geom_center[0],box2.coo_geom_center[1])
-                    #acoocol_box2_lineA = ClosestPointOnLineBoundary(box2line_active[0],box2line_active[1],box1line_active,box1.coo_geom_center[0],box1.coo_geom_center[1])
-                    #acoocol_box2_lineB = ClosestPointOnLineBoundary(box2line_active[2],box2line_active[3],box1line_active,box1.coo_geom_center[0],box1.coo_geom_center[1])
+                    #acoocol_box1_lineA = ClosestPointOnLineSegmentPerpDist(box1line_active[0],box1line_active[1],box2line_active,box2.coo_geom_center[0],box2.coo_geom_center[1])
+                    #acoocol_box1_lineB = ClosestPointOnLineSegmentPerpDist(box1line_active[2],box1line_active[3],box2line_active,box2.coo_geom_center[0],box2.coo_geom_center[1])
+                    #acoocol_box2_lineA = ClosestPointOnLineSegmentPerpDist(box2line_active[0],box2line_active[1],box1line_active,box1.coo_geom_center[0],box1.coo_geom_center[1])
+                    #acoocol_box2_lineB = ClosestPointOnLineSegmentPerpDist(box2line_active[2],box2line_active[3],box1line_active,box1.coo_geom_center[0],box1.coo_geom_center[1])
                     
                     #print("distpen_box1_lineB "+str(distpen_box1_lineB))
                     #print("unitvec_n: "+str(unitvec_n))
@@ -1870,12 +1918,12 @@ def Collision_Box_Box_OLD(box1,box2):
                     #if box2line_active[1] == box2line_active[3]:
                     #    print(2)
                     
-                    #acoocol_box1_lineA = ClosestPointOnLineBoundary(box1line_active[0],box1line_active[1],box2line_active,box2.coo_geom_center[0],box2.coo_geom_center[1])
-                    #acoocol_box1_lineB = ClosestPointOnLineBoundary(box1line_active[2],box1line_active[3],box2line_active,box2.coo_geom_center[0],box2.coo_geom_center[1])
-                    #acoocol_box2_lineA = ClosestPointOnLineBoundary(box2line_active[0],box2line_active[1],box1line_active,box1.coo_geom_center[0],box1.coo_geom_center[1])
-                    #acoocol_box2_lineB = ClosestPointOnLineBoundary(box2line_active[2],box2line_active[3],box1line_active,box1.coo_geom_center[0],box1.coo_geom_center[1])
+                    #acoocol_box1_lineA = ClosestPointOnLineSegmentPerpDist(box1line_active[0],box1line_active[1],box2line_active,box2.coo_geom_center[0],box2.coo_geom_center[1])
+                    #acoocol_box1_lineB = ClosestPointOnLineSegmentPerpDist(box1line_active[2],box1line_active[3],box2line_active,box2.coo_geom_center[0],box2.coo_geom_center[1])
+                    #acoocol_box2_lineA = ClosestPointOnLineSegmentPerpDist(box2line_active[0],box2line_active[1],box1line_active,box1.coo_geom_center[0],box1.coo_geom_center[1])
+                    #acoocol_box2_lineB = ClosestPointOnLineSegmentPerpDist(box2line_active[2],box2line_active[3],box1line_active,box1.coo_geom_center[0],box1.coo_geom_center[1])
                     
-                    #coocol_box2_lineA = ClosestPointOnLineBoundary(box2line_active[0],box2line_active[1],box1line_active,box1.coo_geom_center[0],box1.coo_geom_center[1])
+                    #coocol_box2_lineA = ClosestPointOnLineSegmentPerpDist(box2line_active[0],box2line_active[1],box1line_active,box1.coo_geom_center[0],box1.coo_geom_center[1])
                     #print("distpen_box2_lineA "+str(distpen_box2_lineA))
                     #print("unitvec_n: "+str(unitvec_n))
                     #print(box1line_active[2]-box1line_active[0],box1line_active[3]-box1line_active[1])
@@ -1914,12 +1962,12 @@ def Collision_Box_Box_OLD(box1,box2):
                     #if box2line_active[1] == box2line_active[3]:
                     #    print(2)
                     
-                    #acoocol_box1_lineA = ClosestPointOnLineBoundary(box1line_active[0],box1line_active[1],box2line_active,box2.coo_geom_center[0],box2.coo_geom_center[1])
-                    #acoocol_box1_lineB = ClosestPointOnLineBoundary(box1line_active[2],box1line_active[3],box2line_active,box2.coo_geom_center[0],box2.coo_geom_center[1])
-                    #acoocol_box2_lineA = ClosestPointOnLineBoundary(box2line_active[0],box2line_active[1],box1line_active,box1.coo_geom_center[0],box1.coo_geom_center[1])
-                    #acoocol_box2_lineB = ClosestPointOnLineBoundary(box2line_active[2],box2line_active[3],box1line_active,box1.coo_geom_center[0],box1.coo_geom_center[1])
+                    #acoocol_box1_lineA = ClosestPointOnLineSegmentPerpDist(box1line_active[0],box1line_active[1],box2line_active,box2.coo_geom_center[0],box2.coo_geom_center[1])
+                    #acoocol_box1_lineB = ClosestPointOnLineSegmentPerpDist(box1line_active[2],box1line_active[3],box2line_active,box2.coo_geom_center[0],box2.coo_geom_center[1])
+                    #acoocol_box2_lineA = ClosestPointOnLineSegmentPerpDist(box2line_active[0],box2line_active[1],box1line_active,box1.coo_geom_center[0],box1.coo_geom_center[1])
+                    #acoocol_box2_lineB = ClosestPointOnLineSegmentPerpDist(box2line_active[2],box2line_active[3],box1line_active,box1.coo_geom_center[0],box1.coo_geom_center[1])
                     
-                    #coocol_box2_lineB = ClosestPointOnLineBoundary(box2line_active[2],box2line_active[3],box1line_active,box1.coo_geom_center[0],box1.coo_geom_center[1])
+                    #coocol_box2_lineB = ClosestPointOnLineSegmentPerpDist(box2line_active[2],box2line_active[3],box1line_active,box1.coo_geom_center[0],box1.coo_geom_center[1])
                     #print("distpen_box2_lineB "+str(distpen_box2_lineB))
                     #print("unitvec_n: "+str(unitvec_n))
                     #print(box1line_active[2]-box1line_active[0],box1line_active[3]-box1line_active[1])
@@ -1964,16 +2012,16 @@ def Collision_Polygon_FixedLine(box,fl):
                 boxline_active = [box.coovertex[2*i],box.coovertex[2*i+1],box.coovertex[2*i+2],box.coovertex[2*i+3]]
 
 
-            coocol_flA = ClosestPointOnLineSegmentEdgeIndicator(fl.coovertex[0],fl.coovertex[1],boxline_active)
-            coocol_flB = ClosestPointOnLineSegmentEdgeIndicator(fl.coovertex[2],fl.coovertex[3],boxline_active)
+            coocol_flA = ClosestPointOnLineSegmentAbsDist(fl.coovertex[0],fl.coovertex[1],boxline_active)
+            coocol_flB = ClosestPointOnLineSegmentAbsDist(fl.coovertex[2],fl.coovertex[3],boxline_active)
             #distint_flA = sqrt( (coocol_flA[0]-fl.coovertex[0])**2 + (coocol_flA[1]-fl.coovertex[1])**2 )
             #distint_flB = sqrt( (coocol_flB[0]-fl.coovertex[2])**2 + (coocol_flB[1]-fl.coovertex[3])**2 )
 
             distint_flA = coocol_flA[2]
             distint_flB = coocol_flB[2]
 
-            coocol_boxA = ClosestPointOnLineSegmentEdgeIndicator(boxline_active[0],boxline_active[1],fl.coovertex)
-            coocol_boxB = ClosestPointOnLineSegmentEdgeIndicator(boxline_active[2],boxline_active[3],fl.coovertex)
+            coocol_boxA = ClosestPointOnLineSegmentAbsDist(boxline_active[0],boxline_active[1],fl.coovertex)
+            coocol_boxB = ClosestPointOnLineSegmentAbsDist(boxline_active[2],boxline_active[3],fl.coovertex)
             #distint_boxA = sqrt( (coocol_boxA[0]-boxline_active[0])**2 + (coocol_boxA[1]-boxline_active[1])**2 )
             #distint_boxB = sqrt( (coocol_boxB[0]-boxline_active[2])**2 + (coocol_boxB[1]-boxline_active[3])**2 )
             
@@ -2831,7 +2879,7 @@ obj.append(Object_Trace(canvas_1,obj[5],10,20))
 
 #mouse
 obj.append(Object_FixedPoint(canvas_1,400,400))
-obj.append(Object_Ball(canvas_1,400,450,14,rho_steel,0.5,0.6))
+obj.append(Object_Ball(canvas_1,400,450,14,rho_rubber,0.5,0.6))
 
 obj.append(Object_Polygon(canvas_1,550,450,[-35,-15,-12,-27,35,-15,35,15,-35,15],40,rho_rubber,0.5,0.5,0.1,0.1))
 
@@ -2852,7 +2900,7 @@ con.append(Constraint_SpringDamper(obj[9],obj[6],125,1000000,1000000))
 
 # To mouse
 #con.append(Constraint_SpringDamper(obj[14],obj[15],0,10000000,1000000))
-con.append(Constraint_Distance(obj[14],obj[15],10))
+con.append(Constraint_Distance(obj[14],obj[15],2))
 
 # Rope
 obj.append(Object_FixedPoint(canvas_1,650,50))
@@ -2925,7 +2973,7 @@ canvas_1.bind('<Motion>', motion)
 # initial velocity
 # alla krafter osv funkar för poly2poly, men antipenetreringsisärflyttningen skickar ibland in polygonerna i varandra. något med normalerna?
 # ball to box - ändra så att du räknar ut avstånden till alla ytorna och ta det kortaste, istället för y=kx+m?
-# ball to box - boll mot kant går igenom varandra aningen. ej fixat pga lathet. se om du orkar. ClosestPointOnLineBoundary.
+# ball to box - boll mot kant går igenom varandra aningen. ej fixat pga lathet. se om du orkar. ClosestPointOnLineSegmentPerpDist.
 # Det är något skumt med box - line kollisionerna. Ibland går de igenom varandra.
 # Zoomfunktion av planen (STORT):
 #   - Gör om alla ritkommandon så att de är funktioner med skalning inbyggt som kallas
