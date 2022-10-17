@@ -49,7 +49,7 @@ colcounter = 0
 debug_col_lines = 0
 
 t_elapsed = 0
-dt = 0.002 #0.015
+dt = 0.015 #0.002 0.015 0.05
 
 dtr = canvas_1.create_text(10,20,text="dt = "+str(dt),font=("arial",8),anchor=SW)
 t_elapsedr = canvas_1.create_text(10,30,text="t = "+str(round(t_elapsed,9)),font=("arial",8),anchor=SW)
@@ -2963,10 +2963,11 @@ canvas_1.bind('<Motion>', motion)
 #Testkommentar för githubcommit
 
 ## ATT GÖRA:
-# LÄS: DET KRASHAR PGA ",-12,-27" (tas de bort så funkar allt) TILLAGT I POLYGON 1S KOORDINATER. ALLA KOLLISIONSFUNKTIONER MÅSTE UPPDATERAS
-#      SÅ ATT DE KLARAR AV FLER ÄN 4 KANTPUNKTER SOM JAG PRECIS HAR UPPDATERAT OBJECT_POLYGON TILL
-#           -poly2poly funkar nu tror jag
-# contact ball to polygon
+# händelse nedan (låt simuleringen spela med dt=0.015):
+# ibland kan polygon2polygon-linjer gå igenom varandra utan att nåt händer. senaste händelsen var 2 undre linjer
+# av polygon1 i form av en lodrät spets som gick igenom en relativt vågrät övre linje i polygon2 under många tidssteg.
+# polygon1s spetsnod var då inuti polygon2s kropp. efter ett tag flyttades de isär av någon anledning
+# 
 # gör om alla bounding boxes till fyrkanter istället för cirklar (sqrt är långsam)
 # initial angle 
 # initial angular velocity
