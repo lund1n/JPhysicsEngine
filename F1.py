@@ -49,12 +49,20 @@ colcounter = 0
 debug_col_lines = 0
 
 t_elapsed = 0
-dt = 0.015 #0.002 0.015 0.05
+dt = 0.035 #0.002 0.015 0.05
 
 dtr = canvas_1.create_text(10,20,text="dt = "+str(dt),font=("arial",8),anchor=SW)
 t_elapsedr = canvas_1.create_text(10,30,text="t = "+str(round(t_elapsed,9)),font=("arial",8),anchor=SW)
 
-linecol = canvas_1.create_line( 0,0,1,0, dash = (2,2) )
+linecol = canvas_1.create_line( 0,0,1,0, dash = (2,2) ) # vad är detta?
+
+# coordinate system
+# x
+canvas_1.create_line(20,50,60,50,arrow=LAST,fill="red")
+canvas_1.create_text(66,50,text="x",font=("arial",8),fill="red")
+# y
+canvas_1.create_line(20,50,20,90,arrow=LAST,fill="green")
+canvas_1.create_text(20,96,text="y",font=("arial",8),fill="green")
 
 def Timestep():
     # Increment t_elapsed
@@ -442,7 +450,6 @@ def ClosestPointOnLineSegmentPerpDist2(px,py,line,angle): # WORK HERE
 
     return [ p[0] , p[1] , dist_to_surface, p_outside_of_line_edges ]
 
-
 def Pointinsidepolygoncheck(pointcoo,polygoncoo):
 
     #inside_or_outside_checklist = (len(polygoncoo)/2)*[0] # create a list entry for every line in the polygon
@@ -472,14 +479,28 @@ def Pointinsidepolygoncheck(pointcoo,polygoncoo):
                 ints_h = ints_h + 1
 
         else: # now we can safely check the line which must be sloped
-            k = (line[3]-line[1]) / (line[2]-line[0]) # already determined to not be zero or infinity
+            k = (line[3]-line[1]) / (line[2]-line[0]) # already determined to not be zero or infinity. Correct
             m = line[1]-k*line[0]
 
-            x_int_h = (pointcoo[1]-m)/k
-            y_int_h = k*x_int_h+m
+            #x_int_h = (pointcoo[1]-m)/k
+            #y_int_h = k*x_int_h+m
             
+            #y_int_v = k*pointcoo[0]+m
+            #x_int_v = (y_int_v-m)/k
+
             y_int_v = k*pointcoo[0]+m
             x_int_v = (y_int_v-m)/k
+
+            ##################################################################
+            ### DEBUG DRAW SECTION ###
+            ##################################################################
+            if pointcoo[0] == obj[40].coovertex[4] and i==1:
+                viz.append( canvas_1.create_oval(x_int_v-3,y_int_v-3,x_int_v+3,y_int_v+3,fill="orange",outline="black") )
+                viz.append( canvas_1.create_line( obj[40].coovertex[4],0,obj[40].coovertex[4],800, dash = (2,2) ) )
+                
+            if pointcoo[0] == obj[40].coovertex[4] and i==3:
+                viz.append( canvas_1.create_oval(x_int_v-3,y_int_v-3,x_int_v+3,y_int_v+3,fill="purple",outline="black") )
+            ##################################################################
 
             #canvas_1.coords(p2_draw,x_int_h-3,y_int_h-3,x_int_h+3,y_int_h+3)
             #canvas_1.coords(p3_draw,x_int_v-3,y_int_v-3,x_int_v+3,y_int_v+3)
@@ -488,10 +509,12 @@ def Pointinsidepolygoncheck(pointcoo,polygoncoo):
             if x_int_v >= line_min_x and x_int_v <= line_max_x and y_int_v <= pointcoo[1]:
                 ints_v = ints_v + 1
             # raycast to the sides
-            if x_int_h >= line_min_x and x_int_h <= line_max_x and x_int_h <= pointcoo[0]:
-                ints_h = ints_h + 1
+            #if x_int_h >= line_min_x and x_int_h <= line_max_x and x_int_h <= pointcoo[0]:
+            #    ints_h = ints_h + 1
             
-    if (ints_h%2) != 0 and (ints_v%2) != 0:
+    #if (ints_h%2) != 0 and (ints_v%2) != 0:
+    #if (ints_h%2) != 0:
+    if (ints_v%2) != 0:
         point_inside_polygon = 1
         #canvas_1.itemconfigure(p_draw,fill="green",outline="green")
         #canvas_1.coords(p_draw,x_m-5,y_m-5,x_m+5,y_m+5)
@@ -499,7 +522,7 @@ def Pointinsidepolygoncheck(pointcoo,polygoncoo):
         
     return point_inside_polygon
 
-def Ballinsidepolygoncheck(polygon,pointcoo,polygoncoo,ballradius,linenormals): #THIS NEEDS WORK. IT FAILS WITH CONCAVE POLYGONS.
+def Ballinsidepolygoncheck(polygon,pointcoo,polygoncoo,ballradius,linenormals): #UNUSED AND DOES NOT WORK WELL DUE TO CONCAVE POLYGONS ETC.
 
     point_inside_polygon = 1
 
@@ -1247,7 +1270,7 @@ def Collision_Ball_Polygon(ball,polygon):
         #bip = Ballinsidepolygoncheck(polygon,[ball.coo1[0],ball.coo1[1]],polygon.coovertex,ball.r,polygon.normals_local_rotated)
         #the bip below works
         bip = Pointinsidepolygoncheck([ball.coo1[0],ball.coo1[1]],polygon.coovertex)
-
+        
         polygon_unitvec_n = polygon.normals_local_rotated
         polygon_unitvec_t = polygon.tangents_local_rotated
 
@@ -1342,6 +1365,7 @@ def Collision_Ball_Polygon(ball,polygon):
                 polygon.coo1 = add( polygon.coo1 , polygon_xy_translate )
                 polygon.coo0 = add( polygon.coo0 , polygon_xy_translate )
                 polygon.coom1 = add( polygon.coom1 , polygon_xy_translate )
+                polygon.coo_geom_center = add( polygon.coo_geom_center , polygon_xy_translate )
                 for i in range(len_polygon_half):
                     polygon.coovertex[2*i] = add( polygon.coovertex[2*i] , polygon_xy_translate[0] )
                     polygon.coovertex[2*i+1] = add( polygon.coovertex[2*i+1] , polygon_xy_translate[1] )
@@ -1387,7 +1411,10 @@ def Collision_Ball_Box(box,ball):
                 box.coo1 = subtract( box.coo1 , multiply(box.m/(box.m+ball.m)*pendist,[unitvec_n[0],unitvec_n[1]]) )
                 box.coo0 = subtract( box.coo0 , multiply(box.m/(box.m+ball.m)*pendist,[unitvec_n[0],unitvec_n[1]]) )
                 box.coom1 = subtract( box.coom1 , multiply(box.m/(box.m+ball.m)*pendist,[unitvec_n[0],unitvec_n[1]]) )
-                box.coovertex = subtract( box.coovertex , multiply(box.m/(box.m+ball.m)*pendist,[unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1]]) )
+                #box.coovertex = subtract( box.coovertex , multiply(box.m/(box.m+ball.m)*pendist,[unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1]]) )
+                for j in range(box.n_linesegments):
+                    box.coovertex[2*j] = box.coovertex[2*j] - unitvec_n[0]*(box.m/(box.m+ball.m)*pendist)
+                    box.coovertex[2*j+1] = box.coovertex[2*j+1] - unitvec_n[1]*(box.m/(box.m+ball.m)*pendist)
 
                 ball.coo1 = add( ball.coo1 , multiply(ball.m/(box.m+ball.m)*pendist, [unitvec_n[0],unitvec_n[1]] ))
                 ball.coo0 = add( ball.coo0 , multiply(ball.m/(box.m+ball.m)*pendist, [unitvec_n[0],unitvec_n[1]] ))
@@ -1468,6 +1495,7 @@ def Collision_Box_Line(box,line):
                 box.coo1 = add( box.coo1 , multiply(box.m/(box.m+line.m)*pendist,[unitvec_n[0],unitvec_n[1]]) )
                 box.coo0 = add( box.coo0 , multiply(box.m/(box.m+line.m)*pendist,[unitvec_n[0],unitvec_n[1]]) )
                 box.coom1 = add( box.coom1 , multiply(box.m/(box.m+line.m)*pendist,[unitvec_n[0],unitvec_n[1]]) )
+                box.coo_geom_center = add( box.coo_geom_center , multiply(box.m/(box.m+line.m)*pendist,[unitvec_n[0],unitvec_n[1]]) )
                 #box.coovertex = add( box.coovertex , multiply(box.m/(box.m+line.m)*pendist,[unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1]]) )
                 for j in range(box.n_linesegments):
                     box.coovertex[2*j] = box.coovertex[2*j] + unitvec_n[0]*(box.m/(box.m+line.m)*pendist)
@@ -1489,6 +1517,7 @@ def Collision_Box_Line(box,line):
                 box.coo1 = add( box.coo1 , multiply(box.m/(box.m+line.m)*pendist,[unitvec_n[0],unitvec_n[1]]) )
                 box.coo0 = add( box.coo0 , multiply(box.m/(box.m+line.m)*pendist,[unitvec_n[0],unitvec_n[1]]) )
                 box.coom1 = add( box.coom1 , multiply(box.m/(box.m+line.m)*pendist,[unitvec_n[0],unitvec_n[1]]) )
+                box.coo_geom_center = add( box.coo_geom_center , multiply(box.m/(box.m+line.m)*pendist,[unitvec_n[0],unitvec_n[1]]) )
                 #box.coovertex = add( box.coovertex , multiply(box.m/(box.m+line.m)*pendist,[unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1]]) )
                 for j in range(box.n_linesegments):
                     box.coovertex[2*j] = box.coovertex[2*j] + unitvec_n[0]*(box.m/(box.m+line.m)*pendist)
@@ -1509,6 +1538,7 @@ def Collision_Box_Line(box,line):
                 box.coo1 = add( box.coo1 , multiply(box.m/(box.m+line.m)*pendist,[unitvec_n[0],unitvec_n[1]]) )
                 box.coo0 = add( box.coo0 , multiply(box.m/(box.m+line.m)*pendist,[unitvec_n[0],unitvec_n[1]]) )
                 box.coom1 = add( box.coom1 , multiply(box.m/(box.m+line.m)*pendist,[unitvec_n[0],unitvec_n[1]]) )
+                box.coo_geom_center = add( box.coo_geom_center , multiply(box.m/(box.m+line.m)*pendist,[unitvec_n[0],unitvec_n[1]]) )
                 #box.coovertex = add( box.coovertex , multiply(box.m/(box.m+line.m)*pendist,[unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1]]) )
                 for j in range(box.n_linesegments):
                     box.coovertex[2*j] = box.coovertex[2*j] + unitvec_n[0]*(box.m/(box.m+line.m)*pendist)
@@ -1538,6 +1568,9 @@ def Collision_Polygon_Polygon(pg1,pg2):
         colp_pg2 = [0]*len_pg2_half
 
         #print("angle_pg1:   "+str(pg1.theta1)+",   angle_pg2:   "+str(pg2.theta1))
+
+        # WORK HERE PIPC NEDAN REGISTRERAR IBLAND INTE EN GENOMBRYTNING AV EN PUNKT
+        # MISSAR DEN EN LINJE? SAKNAS FALLET "om sist i listan: 2*i, 2*i+1, 0, 1"?
 
         # Are any points of polygon 1 inside polygon 2?
         for i in range(len_pg1_half):
@@ -1731,6 +1764,7 @@ def Collision_Polygon_Polygon(pg1,pg2):
                             o1.coo1 = subtract( o1.coo1 , o1_xy_translate )
                             o1.coo0 = subtract( o1.coo0 , o1_xy_translate )
                             o1.coom1 = subtract( o1.coom1 , o1_xy_translate )
+                            o1.coo_geom_center = subtract( o1.coo_geom_center , o1_xy_translate )
                             for m in range(lo1h):
                                 o1.coovertex[2*m] = subtract( o1.coovertex[2*m] , o1_xy_translate[0] )
                                 o1.coovertex[2*m+1] = subtract( o1.coovertex[2*m+1] , o1_xy_translate[1] )
@@ -1738,6 +1772,7 @@ def Collision_Polygon_Polygon(pg1,pg2):
                             o2.coo1 = add( o2.coo1 , o2_xy_translate )
                             o2.coo0 = add( o2.coo0 , o2_xy_translate )
                             o2.coom1 = add( o2.coom1 , o2_xy_translate )
+                            o2.coo_geom_center = add( o2.coo_geom_center , o2_xy_translate )
                             for m in range(lo2h):
                                 o2.coovertex[2*m] = add( o2.coovertex[2*m] , o2_xy_translate[0] )
                                 o2.coovertex[2*m+1] = add( o2.coovertex[2*m+1] , o2_xy_translate[1] )
@@ -2045,6 +2080,7 @@ def Collision_Polygon_FixedLine(box,fl):
                 box.coo1 = box.coo1 + multiply([unitvec_n[0],unitvec_n[1]],(r_pinball-distint_boxA))
                 box.coo0 = box.coo0 + multiply([unitvec_n[0],unitvec_n[1]],(r_pinball-distint_boxA))
                 box.coom1 = box.coom1 + multiply([unitvec_n[0],unitvec_n[1]],(r_pinball-distint_boxA))
+                box.coom_geom_center = box.coo_geom_center + multiply([unitvec_n[0],unitvec_n[1]],(r_pinball-distint_boxA))
 
                 #box.coovertex = box.coovertex + multiply([unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1]],(r_pinball-distint_boxA))
                 for j in range(box.n_linesegments):
@@ -2081,11 +2117,12 @@ def Collision_Polygon_FixedLine(box,fl):
                 box.coo1 = box.coo1 + multiply([unitvec_n[0],unitvec_n[1]],(r_pinball-distint_flA))
                 box.coo0 = box.coo0 + multiply([unitvec_n[0],unitvec_n[1]],(r_pinball-distint_flA))
                 box.coom1 = box.coom1 + multiply([unitvec_n[0],unitvec_n[1]],(r_pinball-distint_flA))
+                box.coom_geom_center = box.coo_geom_center + multiply([unitvec_n[0],unitvec_n[1]],(r_pinball-distint_flA))
                 
                 #box.coovertex = box.coovertex + multiply([unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1]],(r_pinball-distint_flA))
                 for j in range(box.n_linesegments):
-                    box.coovertex[2*j] = box.coovertex[2*j] + unitvec_n[0]*(r_pinball-distint_boxA)
-                    box.coovertex[2*j+1] = box.coovertex[2*j+1] + unitvec_n[1]*(r_pinball-distint_boxA)
+                    box.coovertex[2*j] = box.coovertex[2*j] + unitvec_n[0]*(r_pinball-distint_flA)
+                    box.coovertex[2*j+1] = box.coovertex[2*j+1] + unitvec_n[1]*(r_pinball-distint_flA)
 
                 #colcounter = colcounter + 1
                 #print(str(colcounter)+" - flA - "+str(coocol_flA[3]))
@@ -2099,11 +2136,12 @@ def Collision_Polygon_FixedLine(box,fl):
                 box.coo1 = box.coo1 + multiply([unitvec_n[0],unitvec_n[1]],(r_pinball-distint_flB))
                 box.coo0 = box.coo0 + multiply([unitvec_n[0],unitvec_n[1]],(r_pinball-distint_flB))
                 box.coom1 = box.coom1 + multiply([unitvec_n[0],unitvec_n[1]],(r_pinball-distint_flB))
+                box.coom_geom_center = box.coo_geom_center + multiply([unitvec_n[0],unitvec_n[1]],(r_pinball-distint_flB))
                 
                 #box.coovertex = box.coovertex + multiply([unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1],unitvec_n[0],unitvec_n[1]],(r_pinball-distint_flB))
                 for j in range(box.n_linesegments):
-                    box.coovertex[2*j] = box.coovertex[2*j] + unitvec_n[0]*(r_pinball-distint_boxA)
-                    box.coovertex[2*j+1] = box.coovertex[2*j+1] + unitvec_n[1]*(r_pinball-distint_boxA)
+                    box.coovertex[2*j] = box.coovertex[2*j] + unitvec_n[0]*(r_pinball-distint_flB)
+                    box.coovertex[2*j+1] = box.coovertex[2*j+1] + unitvec_n[1]*(r_pinball-distint_flB)
 
                 #colcounter = colcounter + 1
                 #print(str(colcounter)+" - flB - "+str(coocol_flB[3]))
@@ -2497,6 +2535,11 @@ class Object_Polygon:
         #self.canvas.coords( self.lineCD,self.coovertex[4],self.coovertex[5],self.coovertex[6],self.coovertex[7] )
         #self.canvas.coords( self.lineDA,self.coovertex[6],self.coovertex[7],self.coovertex[0],self.coovertex[1] )
         for i in range(self.n_linesegments):
+
+            #canvas_1.create_text(10,20,text="dt = "+str(dt),font=("arial",8),anchor=SW)
+            #viz.append( canvas_1.create_rectangle(ofs-100,ofs-100,ofs+100,ofs+100,fill="white") )
+            viz.append( canvas_1.create_text(self.coovertex[2*i],self.coovertex[2*i+1],text=str(i),font=("arial",8),fill="red") )
+
             if i == (self.n_linesegments-1): # if i is at the last xy-pair in the list
                 self.canvas.coords( self.lines[i],self.coovertex[2*i],self.coovertex[2*i+1],self.coovertex[0],self.coovertex[1] )
             else:
@@ -2881,7 +2924,7 @@ obj.append(Object_Trace(canvas_1,obj[5],10,20))
 obj.append(Object_FixedPoint(canvas_1,400,400))
 obj.append(Object_Ball(canvas_1,400,450,14,rho_rubber,0.5,0.6))
 
-obj.append(Object_Polygon(canvas_1,550,450,[-35,-15,-12,-27,35,-15,35,15,-35,15],40,rho_rubber,0.5,0.5,0.1,0.1))
+obj.append(Object_Polygon(canvas_1,550,450,[-35,-15,-12,-27,35,-15,35,15,-35,15],40,rho_rubber,0.5,0.5,0.1,0.1)) #16
 
 # spring cube
 con.append(Constraint_SpringDamper(obj[0],obj[1],100,1000000,500000))
@@ -2947,8 +2990,8 @@ obj.append(Object_ShowPhysics(canvas_1,obj[36]))
 obj.append(Object_Line(canvas_1,350,500,350,600,3.5,50,rho_rubber,0.5,0.5)) #270,150 | 390,70
 obj.append(Object_Line(canvas_1,355,350,350,450,3.5,50,rho_rubber,0.5,0.5)) #270,150 | 390,70
 
-obj.append(Object_Polygon(canvas_1,540,400,[-25,-20,25,-20,25,20,5,9,-25,20],40,rho_rubber,0.5,0.5,0.2,-0.3))
-obj.append(Object_Polygon(canvas_1,550,330,[-35,-10,35,-10,35,10,-35,10],40,rho_rubber,0.5,0.5,-0.3,0.1))
+obj.append(Object_Polygon(canvas_1,540,400,[-25,-20,25,-20,25,20,5,9,-25,20],40,rho_rubber,0.5,0.5,0.2,-0.3)) #40
+obj.append(Object_Polygon(canvas_1,550,330,[-35,-10,35,-10,35,10,-35,10],40,rho_rubber,0.5,0.5,-0.3,0.1)) #41
 
 x_m = 0
 y_m = 0
@@ -2963,11 +3006,8 @@ canvas_1.bind('<Motion>', motion)
 #Testkommentar för githubcommit
 
 ## ATT GÖRA:
-# händelse nedan (låt simuleringen spela med dt=0.015):
-# ibland kan polygon2polygon-linjer gå igenom varandra utan att nåt händer. senaste händelsen var 2 undre linjer
-# av polygon1 i form av en lodrät spets som gick igenom en relativt vågrät övre linje i polygon2 under många tidssteg.
-# polygon1s spetsnod var då inuti polygon2s kropp. efter ett tag flyttades de isär av någon anledning
-# 
+# polygon och line går ibland genom varandra utan kontakt
+# polygon och ine fastnar ibland i varandra
 # gör om alla bounding boxes till fyrkanter istället för cirklar (sqrt är långsam)
 # initial angle 
 # initial angular velocity
