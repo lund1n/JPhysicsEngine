@@ -491,6 +491,7 @@ def Pointinsidepolygoncheck(pointcoo,polygoncoo):
             y_int_v = k*pointcoo[0]+m
             x_int_v = (y_int_v-m)/k
 
+            '''
             ##################################################################
             ### DEBUG DRAW SECTION ###
             ##################################################################
@@ -501,6 +502,7 @@ def Pointinsidepolygoncheck(pointcoo,polygoncoo):
             if pointcoo[0] == obj[40].coovertex[4] and i==3:
                 viz.append( canvas_1.create_oval(x_int_v-3,y_int_v-3,x_int_v+3,y_int_v+3,fill="purple",outline="black") )
             ##################################################################
+            '''
 
             #canvas_1.coords(p2_draw,x_int_h-3,y_int_h-3,x_int_h+3,y_int_h+3)
             #canvas_1.coords(p3_draw,x_int_v-3,y_int_v-3,x_int_v+3,y_int_v+3)
@@ -708,7 +710,7 @@ def Check_CollisionType(o1,o2):
             Collision_Line_Line(o2,o1)
             return
         if isinstance(o2, Object_Polygon):
-            Collision_Box_Line(o2,o1)
+            Collision_Polygon_Line(o2,o1)
             return
 
     if isinstance(o1, Object_Polygon):
@@ -716,7 +718,7 @@ def Check_CollisionType(o1,o2):
             Collision_Polygon_FixedLine(o1,o2)
             return
         if isinstance(o2, Object_Line):
-            Collision_Box_Line(o1,o2)
+            Collision_Polygon_Line(o1,o2)
             return
         #if isinstance(o2, Object_Ball):
         #    Collision_Ball_Box(o1,o2)
@@ -1328,6 +1330,7 @@ def Collision_Ball_Polygon(ball,polygon):
             #if ool_list[shortest_dist_index]==0:
             #if 1==1:
             if shortest_dist <= ball.r or bip:
+                '''
                 print("shortest dist")
                 print(shortest_dist)
                 print("ball.r")
@@ -1335,7 +1338,8 @@ def Collision_Ball_Polygon(ball,polygon):
                 print("ool_list shortest distance index")
                 print(ool_list[shortest_dist_index])
                 #canvas_1.create_oval(colpx-3,colpy-3,colpx+3,colpy+3,fill="green",outline="green")
-                Contact_line_line(ball,polygon,[colpx,colpy,0],[polygon_unitvec_n[2*shortest_dist_index],polygon_unitvec_n[2*shortest_dist_index+1],0],[polygon_unitvec_t[2*shortest_dist_index],polygon_unitvec_t[2*shortest_dist_index+1],0]) # WORK HERE
+                '''
+                
 
                 '''
                 print("###############################")
@@ -1356,8 +1360,16 @@ def Collision_Ball_Polygon(ball,polygon):
                 '''
                 
                 pendist = ball.r - shortest_dist
+                if bip:
+                    pendist = shortest_dist + ball.r
                 ball_xy_translate = multiply(ball.m/(ball.m+polygon.m)*pendist,[polygon_unitvec_n[2*shortest_dist_index],polygon_unitvec_n[2*shortest_dist_index+1]])
                 polygon_xy_translate = multiply(polygon.m/(ball.m+polygon.m)*pendist,[polygon_unitvec_n[2*shortest_dist_index],polygon_unitvec_n[2*shortest_dist_index+1]])
+                '''
+                if bip:
+                    ball_xy_translate = -ball_xy_translate
+                    polygon_xy_translate =-polygon_xy_translate
+                    print("bip")
+                '''
                 ball.coo1 = subtract( ball.coo1 , ball_xy_translate )
                 ball.coo0 = subtract( ball.coo0 , ball_xy_translate )
                 ball.coom1 = subtract( ball.coom1 , ball_xy_translate )
@@ -1369,6 +1381,7 @@ def Collision_Ball_Polygon(ball,polygon):
                 for i in range(len_polygon_half):
                     polygon.coovertex[2*i] = add( polygon.coovertex[2*i] , polygon_xy_translate[0] )
                     polygon.coovertex[2*i+1] = add( polygon.coovertex[2*i+1] , polygon_xy_translate[1] )
+                Contact_line_line(ball,polygon,[colpx,colpy,0],[polygon_unitvec_n[2*shortest_dist_index],polygon_unitvec_n[2*shortest_dist_index+1],0],[polygon_unitvec_t[2*shortest_dist_index],polygon_unitvec_t[2*shortest_dist_index+1],0]) # WORK HERE                
                         
 def Collision_Ball_Box(box,ball):
     
@@ -1452,7 +1465,7 @@ def Collision_Ball_Box_OLD(box,ball):
                 ball.coo0 = subtract( ball.coo0 , multiply(ball.m/(box.m+ball.m)*pendist, [unitvec_n[0],unitvec_n[1]] ))
                 ball.coom1 = subtract( ball.coom1 , multiply(ball.m/(box.m+ball.m)*pendist, [unitvec_n[0],unitvec_n[1]] ))
 
-def Collision_Box_Line(box,line):
+def Collision_Polygon_Line(box,line):
     
     r_pinball = line.hhalf
 
@@ -2538,7 +2551,8 @@ class Object_Polygon:
 
             #canvas_1.create_text(10,20,text="dt = "+str(dt),font=("arial",8),anchor=SW)
             #viz.append( canvas_1.create_rectangle(ofs-100,ofs-100,ofs+100,ofs+100,fill="white") )
-            viz.append( canvas_1.create_text(self.coovertex[2*i],self.coovertex[2*i+1],text=str(i),font=("arial",8),fill="red") )
+            
+            #viz.append( canvas_1.create_text(self.coovertex[2*i],self.coovertex[2*i+1],text=str(i),font=("arial",8),fill="red") )
 
             if i == (self.n_linesegments-1): # if i is at the last xy-pair in the list
                 self.canvas.coords( self.lines[i],self.coovertex[2*i],self.coovertex[2*i+1],self.coovertex[0],self.coovertex[1] )
@@ -2992,6 +3006,7 @@ obj.append(Object_Line(canvas_1,355,350,350,450,3.5,50,rho_rubber,0.5,0.5)) #270
 
 obj.append(Object_Polygon(canvas_1,540,400,[-25,-20,25,-20,25,20,5,9,-25,20],40,rho_rubber,0.5,0.5,0.2,-0.3)) #40
 obj.append(Object_Polygon(canvas_1,550,330,[-35,-10,35,-10,35,10,-35,10],40,rho_rubber,0.5,0.5,-0.3,0.1)) #41
+obj.append(Object_Polygon(canvas_1,240,400,[-45,-20,45,-20,45,20,5,59,-25,20],40,rho_rubber,0.5,0.5,0.2,-0.3)) #40
 
 x_m = 0
 y_m = 0
@@ -3012,9 +3027,6 @@ canvas_1.bind('<Motion>', motion)
 # initial angle 
 # initial angular velocity
 # initial velocity
-# alla krafter osv funkar för poly2poly, men antipenetreringsisärflyttningen skickar ibland in polygonerna i varandra. något med normalerna?
-# ball to box - ändra så att du räknar ut avstånden till alla ytorna och ta det kortaste, istället för y=kx+m?
-# ball to box - boll mot kant går igenom varandra aningen. ej fixat pga lathet. se om du orkar. ClosestPointOnLineSegmentPerpDist.
 # Det är något skumt med box - line kollisionerna. Ibland går de igenom varandra.
 # Zoomfunktion av planen (STORT):
 #   - Gör om alla ritkommandon så att de är funktioner med skalning inbyggt som kallas
