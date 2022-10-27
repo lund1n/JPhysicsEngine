@@ -43,6 +43,9 @@ viz_sf2 = 1000000
 sf_farrow1 = 50
 sf_farrow2 = 100000000
 viz = []
+col_safetymargin = 1 # see polygon-to-polygon collisions for an explanation. basically used to fight floating point
+# inaccuracies/misses in detecting line crossings using y=kx+m which otherwise may lead to unexpected behavior.
+# be careful about increasing this too much as it may cause contacts in unexpected locations.
 
 colcounter = 0
 
@@ -1671,8 +1674,8 @@ def Collision_Polygon_Line(box,line):
 def Collision_Polygon_Polygon(pg1,pg2):
 
     if sqrt( (pg1.coo0[0]-pg2.coo0[0])**2 + (pg1.coo0[1]-pg2.coo0[1])**2 ) <= (pg1.r + pg2.r): #if inside bounding box (change this to not use sqrt)
-        intp_pg1 = 0
-        intp_pg2 = 0
+        n_pip_1 = 0
+        n_pip_2 = 0
         #len_pg1 = len(pg1.coovertex)
         #len_pg1_half = int(len(pg1.coovertex)*0.5) #changed from /2 to *0.5. may or may not cause issues?
         #len_pg2 = len(pg2.coovertex)
@@ -1694,13 +1697,13 @@ def Collision_Polygon_Polygon(pg1,pg2):
         # Are any points of polygon 1 inside polygon 2?
         for i in range(len_pg1_half):
             check_pg1 = Pointinsidepolygoncheck([pg1.coovertex[2*i],pg1.coovertex[2*i+1]],pg2.coovertex)
-            intp_pg1 = intp_pg1 + check_pg1 #if the point is intersecting, increase this counter
+            n_pip_1 = n_pip_1 + check_pg1 #if the point is intersecting, increase this counter
             colp_pg1[i] = check_pg1 #mark the vertex which is intersecting with a 1
 
         # Are any points of polygon 2 inside polygon 1?
         for i in range(len_pg2_half):
             check_pg2 = Pointinsidepolygoncheck([pg2.coovertex[2*i],pg2.coovertex[2*i+1]],pg1.coovertex)
-            intp_pg2 = intp_pg2 + check_pg2
+            n_pip_2 = n_pip_2 + check_pg2
             colp_pg2[i] = check_pg2
 
         pg1_unitvec_n = pg1.normals_local_rotated
@@ -1793,8 +1796,12 @@ def Collision_Polygon_Polygon(pg1,pg2):
                         if linesegcrossed_o1_list[k] == 1: #if the line segment of polygon1 has been crossed by a line segment of polygon2
                             crossed = crossed + 1 #crossed amount of unique line segments (NOT amount of crossings detected)
                     for k in range(lo2h): #which line crossing point is the closest? it determines the line whose normal shall be used
-                        if linesegcrossed_o2_list[k] == 1: #if the line segment of polygon2 has been crossed by a line segment of polygon1
-                            cpolsei = ClosestPointOnLineSegmentAbsDist(point[0],point[1],o2.linesegment(k))
+                        cpolsei = ClosestPointOnLineSegmentAbsDist(point[0],point[1],o2.linesegment(k))
+                        if linesegcrossed_o2_list[k] == 1 or cpolsei[2] < col_safetymargin: #if the line segment of polygon2 has been crossed by a line segment of polygon1.
+                            # the second criteria is to combat what seems like floating point rounding errors. sometimes a point may be inside of a polygon
+                            # without any lines being crossed. if there then is another line crossing far away, the long distance to that location
+                            # may be chosen and the polygons jump far apart. criteria two here adds some margin to the line crossing by also looking at
+                            # the closest distance of the point to all line segments.
                             distlinecross_list[k] = cpolsei[2] #record the distance to the penetrating point
                             crossed = crossed + 1 #crossed amount of unique line segments (NOT amount of crossings detected)
                         #we now check if both polygons have crossed line segments (as opposed to just o2 as originally) and increment the "crossed" variable,
@@ -1850,8 +1857,8 @@ def Collision_Polygon_Polygon(pg1,pg2):
                             #print("------------------------------------------------------------------------")
 
                             ### DEBUG - WORK HERE WORK HERE WORK HERE
-                            if shortest_dist > 40:
-                                1==1 # Problems occur when only one line crossing is detected per object. One of the objects should always have 2.
+                            #if shortest_dist > 40:
+                            #    1==1 # Problems occur when only one line crossing is detected per object. One of the objects should always have 2.
                             ###
 
                             #canvas_1.create_oval(colpx-3,colpy-3,colpx+3,colpy+3,fill="green",outline="green")
@@ -1902,14 +1909,15 @@ def Collision_Polygon_Polygon(pg1,pg2):
                         
                         
         
-        Contact_o1_o2(pg1,pg2,intp_pg1,len_pg1,len_pg1_half,len_pg2,len_pg2_half,pg2_unitvec_n,pg2_unitvec_t,colp_pg1)
-        Contact_o1_o2(pg2,pg1,intp_pg2,len_pg2,len_pg2_half,len_pg1,len_pg1_half,pg1_unitvec_n,pg1_unitvec_t,colp_pg2)
+        Contact_o1_o2(pg1,pg2,n_pip_1,len_pg1,len_pg1_half,len_pg2,len_pg2_half,pg2_unitvec_n,pg2_unitvec_t,colp_pg1)
+        Contact_o1_o2(pg2,pg1,n_pip_2,len_pg2,len_pg2_half,len_pg1,len_pg1_half,pg1_unitvec_n,pg1_unitvec_t,colp_pg2)
 
 def Collision_Polygon_FixedPolygon(pg1,pg2):
 
     if sqrt( (pg1.coo0[0]-pg2.coo0[0])**2 + (pg1.coo0[1]-pg2.coo0[1])**2 ) <= (pg1.r + pg2.r): #if inside bounding box (change this to not use sqrt)
-        intp_pg1 = 0
-        intp_pg2 = 0
+
+        n_pip_1 = 0
+        n_pip_2 = 0
 
         len_pg1 = 2*pg1.n_linesegments
         len_pg1_half = pg1.n_linesegments
@@ -1919,22 +1927,22 @@ def Collision_Polygon_FixedPolygon(pg1,pg2):
         colp_pg1 = [0]*len_pg1_half
         colp_pg2 = [0]*len_pg2_half
 
-        # Are any points of polygon 1 inside polygon 2?
-        for i in range(len_pg1_half):
-            check_pg1 = Pointinsidepolygoncheck([pg1.coovertex[2*i],pg1.coovertex[2*i+1]],pg2.coovertex)
-            intp_pg1 = intp_pg1 + check_pg1 #if the point is intersecting, increase this counter
-            colp_pg1[i] = check_pg1 #mark the vertex which is intersecting with a 1
-
-        # Are any points of polygon 2 inside polygon 1?
-        for i in range(len_pg2_half):
-            check_pg2 = Pointinsidepolygoncheck([pg2.coovertex[2*i],pg2.coovertex[2*i+1]],pg1.coovertex)
-            intp_pg2 = intp_pg2 + check_pg2
-            colp_pg2[i] = check_pg2
-
         pg1_unitvec_n = pg1.normals_local_rotated
         pg1_unitvec_t = pg1.tangents_local_rotated
         pg2_unitvec_n = pg2.normals_local_rotated
         pg2_unitvec_t = pg2.tangents_local_rotated
+
+        # Are any points of polygon 1 inside polygon 2?
+        for i in range(len_pg1_half):
+            check_pg1 = Pointinsidepolygoncheck([pg1.coovertex[2*i],pg1.coovertex[2*i+1]],pg2.coovertex)
+            n_pip_1 = n_pip_1 + check_pg1 #if the polygon 1 point is inside polygon 2, increase this counter
+            colp_pg1[i] = check_pg1 # mark the polygon 1 point with a 1
+
+        # Are any points of polygon 2 inside polygon 1?
+        for i in range(len_pg2_half):
+            check_pg2 = Pointinsidepolygoncheck([pg2.coovertex[2*i],pg2.coovertex[2*i+1]],pg1.coovertex)
+            n_pip_2 = n_pip_2 + check_pg2 #if the polygon 2 point is inside polygon 1, increase this counter
+            colp_pg2[i] = check_pg2 # mark the polygon 2 point with a 1
 
         ###########################################################################################################################
         ##### Define collision function #####
@@ -1963,8 +1971,8 @@ def Collision_Polygon_FixedPolygon(pg1,pg2):
 
                         crosspoint = IntersectionPoint_Line_Line([line1[0],line1[1],line1[2],line1[3]],[line2[0],line2[1],line2[2],line2[3]])
                         if crosspoint[2] == 1: #if the crossing point of line1 and line2 is inside of the line2 endpoints
-                            coolinecross_list[2*j] = crosspoint[0]
-                            coolinecross_list[2*j+1] = crosspoint[1]
+                            coolinecross_list[2*j] = crosspoint[0] # CURRENTLY NOT USED
+                            coolinecross_list[2*j+1] = crosspoint[1] # CURRENTLY NOT USED
                             linesegcrossed_o1_list[i] = 1 #DEBUG ONLY (not anymore?)
                             linesegcrossed_o2_list[j] = 1 #then mark line2 as a crossed segment of polygon2
                 ### end testsection
@@ -2005,8 +2013,12 @@ def Collision_Polygon_FixedPolygon(pg1,pg2):
                         if linesegcrossed_o1_list[k] == 1: #if the line segment of polygon1 has been crossed by a line segment of polygon2
                             crossed = crossed + 1 #crossed amount of unique line segments (NOT amount of crossings detected)
                     for k in range(lo2h): #which line crossing point is the closest? it determines the line whose normal shall be used
-                        if linesegcrossed_o2_list[k] == 1: #if the line segment of polygon2 has been crossed by a line segment of polygon1
-                            cpolsei = ClosestPointOnLineSegmentAbsDist(point[0],point[1],o2.linesegment(k))
+                        cpolsei = ClosestPointOnLineSegmentAbsDist(point[0],point[1],o2.linesegment(k))
+                        if linesegcrossed_o2_list[k] == 1 or cpolsei[2] < col_safetymargin: #if the line segment of polygon2 has been crossed by a line segment of polygon1.
+                            # the second criteria is to combat what seems like floating point rounding errors. sometimes a point may be inside of a polygon
+                            # without any lines being crossed. if there then is another line crossing far away, the long distance to that location
+                            # may be chosen and the polygons jump far apart. criteria two here adds some margin to the line crossing by also looking at
+                            # the closest distance of the point to all line segments.
                             distlinecross_list[k] = cpolsei[2] #record the distance to the penetrating point
                             crossed = crossed + 1 #crossed amount of unique line segments (NOT amount of crossings detected)
                         #we now check if both polygons have crossed line segments (as opposed to just o2 as originally) and increment the "crossed" variable,
@@ -2066,18 +2078,20 @@ def Collision_Polygon_FixedPolygon(pg1,pg2):
 
             if n_int > 0: # if a point/vertex of o1 is inside of o2
 
-                ### testsection
+                ### CHECK WHICH LINE SEGMENTS OF BOTH POLYGONS THAT HAVE CROSSED
                 coolinecross_list = [None]*lo2
                 linesegcrossed_o1_list = [None]*lo1h
                 linesegcrossed_o2_list = [None]*lo2h
 
-                for i in range(lo1h): # for every point in o1 ...
+                # for every line in o1 ...
+                for i in range(lo1h):
                     if i == (lo1h-1): # if i is at the last xy-pair in the list
                         line1 = [o1.coovertex[2*i],o1.coovertex[2*i+1],o1.coovertex[0],o1.coovertex[1]]
                     else: # else, count as usual
                         line1 = [o1.coovertex[2*i],o1.coovertex[2*i+1],o1.coovertex[2*i+2],o1.coovertex[2*i+3]]
 
-                    for j in range(lo2h): # ... go through all lines in o2
+                    # ... go through all lines in o2
+                    for j in range(lo2h):
                         if j == (lo2h-1): # if i is at the last xy-pair in the list
                             line2 = [o2.coovertex[2*j],o2.coovertex[2*j+1],o2.coovertex[0],o2.coovertex[1]]
                         else: # else, count as usual
@@ -2085,10 +2099,10 @@ def Collision_Polygon_FixedPolygon(pg1,pg2):
 
                         crosspoint = IntersectionPoint_Line_Line([line1[0],line1[1],line1[2],line1[3]],[line2[0],line2[1],line2[2],line2[3]])
                         if crosspoint[2] == 1: #if the crossing point of line1 and line2 is inside of the line2 endpoints
-                            coolinecross_list[2*j] = crosspoint[0] #collision x coordinate for what line index
-                            coolinecross_list[2*j+1] = crosspoint[1] #collision y coordinate for what line index
-                            linesegcrossed_o1_list[i] = 1 #DEBUG ONLY (not anymore?)
-                            linesegcrossed_o2_list[j] = 1 #then mark line2 as a crossed segment of polygon2
+                            #coolinecross_list[2*j] = crosspoint[0] #collision x coordinate for that line index - FUNKAR NOG EJ. SKRIVS ÖVER VARJE j
+                            #coolinecross_list[2*j+1] = crosspoint[1] #collision y coordinate for that line index - FUNKAR NOG EJ. SKRIVS ÖVER VARJE j
+                            linesegcrossed_o1_list[i] = 1 #then mark line segment i as a crossed segment of polygon1
+                            linesegcrossed_o2_list[j] = 1 #then mark line segment j as a crossed segment of polygon2
                 ### end testsection
 
                 for i in range(lo1h): # for every point in o1 ...
@@ -2106,6 +2120,7 @@ def Collision_Polygon_FixedPolygon(pg1,pg2):
 
                     crossed = 0  #crossed amount of unique line segments (NOT amount of crossings detected)
 
+                    '''
                     #####
                     for j in range(lo2h): # ... go through all lines in o2
                         if j == (lo2h-1): # if i is at the last xy-pair in the list
@@ -2120,6 +2135,7 @@ def Collision_Polygon_FixedPolygon(pg1,pg2):
                         int_list[2*j+1] = cooint[1] # store y coordinate of closest point to o1 point on the o2 line
                         dist_list[j] = cooint[2] # store distance of closest point to o1 point on the o2 line
                         ool_list[j] = cooint[3] # outside of line list. checks if the o1 point is outside of the endpoints of the o2 line and thus cant hit it
+                    '''
 
                     #####
                     for k in range(lo1h): #which line crossing point is the closest? it determines the line whose normal shall be used
@@ -2127,10 +2143,18 @@ def Collision_Polygon_FixedPolygon(pg1,pg2):
                         if linesegcrossed_o1_list[k] == 1: #if the line segment of polygon1 has been crossed by a line segment of polygon2
                             crossed = crossed + 1 #crossed amount of unique line segments (NOT amount of crossings detected)
                     for k in range(lo2h): #which line crossing point is the closest? it determines the line whose normal shall be used
-                        if linesegcrossed_o2_list[k] == 1: #if the line segment of polygon2 has been crossed by a line segment of polygon1
-                            cpolsei = ClosestPointOnLineSegmentAbsDist(point[0],point[1],o2.linesegment(k))
+                        cpolsei = ClosestPointOnLineSegmentAbsDist(point[0],point[1],o2.linesegment(k))
+                        if linesegcrossed_o2_list[k] == 1 or cpolsei[2] < col_safetymargin: #if the line segment of polygon2 has been crossed by a line segment of polygon1.
+                            # the second criteria is to combat what seems like floating point rounding errors. sometimes a point may be inside of a polygon
+                            # without any lines being crossed. if there then is another line crossing far away, the long distance to that location
+                            # may be chosen and the polygons jump far apart. criteria two here adds some margin to the line crossing by also looking at
+                            # the closest distance of the point to all line segments.
                             distlinecross_list[k] = cpolsei[2] #record the distance to the penetrating point
                             crossed = crossed + 1 #crossed amount of unique line segments (NOT amount of crossings detected)
+                            ###### DEBUG ONLY #####
+                            #if distlinecross_list[k] > 5:
+                            #    ClosestPointOnLineSegmentAbsDist(point[0],point[1],o2.linesegment(k))
+                            #####
                         #we now check if both polygons have crossed line segments (as opposed to just o2 as originally) and increment the "crossed" variable,
                         #because if the combined number of line segments crossed is less than 3, which
                         #for some reason sometimes happens when one box slides on top of another and two edge nodes pass,
@@ -2178,17 +2202,20 @@ def Collision_Polygon_FixedPolygon(pg1,pg2):
                                 o2.coovertex[2*m] = add( o2.coovertex[2*m] , o2_xy_translate[0] )
                                 o2.coovertex[2*m+1] = add( o2.coovertex[2*m+1] , o2_xy_translate[1] )
                             
+                                print("colp_o1: "+str(colp_o1))
+                                print("distlinecross_list: "+str(distlinecross_list))
+                                print("filtered: "+str(filtered))
                                 print("pendist: "+str(pendist))
                                 print("o2_xy_translate: "+str(o2_xy_translate))
                                 print("normal: "+str([unitvec_n[2*shortest_dist_index],unitvec_n[2*shortest_dist_index+1],0]))
                                 print("tangent: "+str([unitvec_t[2*shortest_dist_index],unitvec_t[2*shortest_dist_index+1],0]))
-                                print(distlinecross_list)
-                                print(filtered)
-                            if pendist > 5:
+                                print("------------------------")
+                            #if pendist > 5:
+                            if 1==1:
                                 print(2)
-                                canvas_1.create_line( [o2.coovertex[2*shortest_dist_index],o2.coovertex[2*shortest_dist_index+1],o2.coovertex[2*shortest_dist_index+2],o2.coovertex[2*shortest_dist_index+3]],fill="purple",width=3 )
-                                canvas_1.create_oval(colpx-3,colpy-3,colpx+3,colpy+3,fill="purple",outline="purple")
-                                canvas_1.create_line( [o2.coovertex[2*distlinecross_list.index(max(filtered))],o2.coovertex[2*distlinecross_list.index(max(filtered))+1],o2.coovertex[2*distlinecross_list.index(max(filtered))+2],o2.coovertex[2*distlinecross_list.index(max(filtered))+3]],fill="orange",width=3 )
+                                viz.append( canvas_1.create_line( [o2.coovertex[2*shortest_dist_index],o2.coovertex[2*shortest_dist_index+1],o2.coovertex[2*shortest_dist_index+2],o2.coovertex[2*shortest_dist_index+3]],fill="purple",width=5 ) )
+                                viz.append( canvas_1.create_line( [o2.coovertex[2*distlinecross_list.index(max(filtered))],o2.coovertex[2*distlinecross_list.index(max(filtered))+1],o2.coovertex[2*distlinecross_list.index(max(filtered))+2],o2.coovertex[2*distlinecross_list.index(max(filtered))+3]],fill="orange",width=5 ) )
+                                viz.append( canvas_1.create_oval(colpx-5,colpy-5,colpx+5,colpy+5,fill="purple",outline="black") )
                                 1==1
                             
                             
@@ -2196,8 +2223,8 @@ def Collision_Polygon_FixedPolygon(pg1,pg2):
                         
                         
         
-        Contact_o1dyn_penetrates_o2stat(pg1,pg2,intp_pg1,len_pg1,len_pg1_half,len_pg2,len_pg2_half,pg2_unitvec_n,pg2_unitvec_t,colp_pg1)
-        Contact_o1stat_penetrates_o2dyn(pg2,pg1,intp_pg2,len_pg2,len_pg2_half,len_pg1,len_pg1_half,pg1_unitvec_n,pg1_unitvec_t,colp_pg2)
+        Contact_o1dyn_penetrates_o2stat(pg1,pg2,n_pip_1,len_pg1,len_pg1_half,len_pg2,len_pg2_half,pg2_unitvec_n,pg2_unitvec_t,colp_pg1)
+        Contact_o1stat_penetrates_o2dyn(pg2,pg1,n_pip_2,len_pg2,len_pg2_half,len_pg1,len_pg1_half,pg1_unitvec_n,pg1_unitvec_t,colp_pg2)
 
 def Collision_Box_Box_OLD(box1,box2):
 
