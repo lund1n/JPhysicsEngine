@@ -50,6 +50,7 @@ col_safetymargin = 1 # see polygon-to-polygon collisions for an explanation. bas
 colcounter = 0
 
 debug_col_lines = 0
+debug_polygon_to_polygon_cols = 1
 
 t_elapsed = 0
 dt = 0.035 #0.002 0.015 0.05
@@ -1863,6 +1864,13 @@ def Collision_Polygon_Polygon(pg1,pg2):
 
                             #canvas_1.create_oval(colpx-3,colpy-3,colpx+3,colpy+3,fill="green",outline="green")
                             
+
+                            if debug_polygon_to_polygon_cols:
+                                viz.append( canvas_1.create_line( [o2.coovertex[2*shortest_dist_index],o2.coovertex[2*shortest_dist_index+1],o2.coovertex[2*shortest_dist_index+2],o2.coovertex[2*shortest_dist_index+3]],fill="orange",width=5 ) )
+                                #viz.append( canvas_1.create_line( [o2.coovertex[2*distlinecross_list.index(max(filtered))],o2.coovertex[2*distlinecross_list.index(max(filtered))+1],o2.coovertex[2*distlinecross_list.index(max(filtered))+2],o2.coovertex[2*distlinecross_list.index(max(filtered))+3]],fill="orange",width=5 ) )
+                                #viz.append( canvas_1.create_oval(colpx-5,colpy-5,colpx+5,colpy+5,fill="purple") )
+                            
+
                             #Definition: Contact_line_line(o1,o2,coocol,unitvec_n,unitvec_t)
                             Contact_line_line(o1,o2,[colpx,colpy,0],[unitvec_n[2*shortest_dist_index],unitvec_n[2*shortest_dist_index+1],0],[unitvec_t[2*shortest_dist_index],unitvec_t[2*shortest_dist_index+1],0]) # WORK HERE
 
@@ -2045,6 +2053,11 @@ def Collision_Polygon_FixedPolygon(pg1,pg2):
                             shortest_dist_index = distlinecross_list.index(shortest_dist)
                             colpx = point[0]
                             colpy = point[1]
+
+                            if debug_polygon_to_polygon_cols:
+                                viz.append( canvas_1.create_line( [o2.coovertex[2*shortest_dist_index],o2.coovertex[2*shortest_dist_index+1],o2.coovertex[2*shortest_dist_index+2],o2.coovertex[2*shortest_dist_index+3]],fill="orange",width=5 ) )
+                                #viz.append( canvas_1.create_line( [o2.coovertex[2*distlinecross_list.index(max(filtered))],o2.coovertex[2*distlinecross_list.index(max(filtered))+1],o2.coovertex[2*distlinecross_list.index(max(filtered))+2],o2.coovertex[2*distlinecross_list.index(max(filtered))+3]],fill="orange",width=5 ) )
+                                #viz.append( canvas_1.create_oval(colpx-5,colpy-5,colpx+5,colpy+5,fill="purple") )
                             
                             Contact_dyn_statline(o1,o2,[colpx,colpy,0],[unitvec_n[2*shortest_dist_index],unitvec_n[2*shortest_dist_index+1],0],[unitvec_t[2*shortest_dist_index],unitvec_t[2*shortest_dist_index+1],0]) #WORK HERE
                             #Contact_line_line(o1,o2,[colpx,colpy,0],[unitvec_n[2*shortest_dist_index],unitvec_n[2*shortest_dist_index+1],0],[unitvec_t[2*shortest_dist_index],unitvec_t[2*shortest_dist_index+1],0]) # WORK HERE
@@ -2068,9 +2081,6 @@ def Collision_Polygon_FixedPolygon(pg1,pg2):
                                 o2.coovertex[2*m] = add( o2.coovertex[2*m] , o2_xy_translate[0] )
                                 o2.coovertex[2*m+1] = add( o2.coovertex[2*m+1] , o2_xy_translate[1] )
                             '''
-
-                            if pendist > 5:
-                                print(1)
                             
                     ###########################################################################################################################
 
@@ -2179,6 +2189,11 @@ def Collision_Polygon_FixedPolygon(pg1,pg2):
                             shortest_dist_index = distlinecross_list.index(shortest_dist)
                             colpx = point[0]
                             colpy = point[1]
+
+                            if debug_polygon_to_polygon_cols:
+                                viz.append( canvas_1.create_line( [o2.coovertex[2*shortest_dist_index],o2.coovertex[2*shortest_dist_index+1],o2.coovertex[2*shortest_dist_index+2],o2.coovertex[2*shortest_dist_index+3]],fill="orange",width=5 ) )
+                                #viz.append( canvas_1.create_line( [o2.coovertex[2*distlinecross_list.index(max(filtered))],o2.coovertex[2*distlinecross_list.index(max(filtered))+1],o2.coovertex[2*distlinecross_list.index(max(filtered))+2],o2.coovertex[2*distlinecross_list.index(max(filtered))+3]],fill="orange",width=5 ) )
+                                #viz.append( canvas_1.create_oval(colpx-5,colpy-5,colpx+5,colpy+5,fill="purple") )
                             
                             Contact_dyn_statline(o2,o1,[colpx,colpy,0],[unitvec_n[2*shortest_dist_index],unitvec_n[2*shortest_dist_index+1],0],[unitvec_t[2*shortest_dist_index],unitvec_t[2*shortest_dist_index+1],0]) #WORK HERE
                             #Contact_line_line(o1,o2,[colpx,colpy,0],[unitvec_n[2*shortest_dist_index],unitvec_n[2*shortest_dist_index+1],0],[unitvec_t[2*shortest_dist_index],unitvec_t[2*shortest_dist_index+1],0]) # WORK HERE
@@ -2202,6 +2217,7 @@ def Collision_Polygon_FixedPolygon(pg1,pg2):
                                 o2.coovertex[2*m] = add( o2.coovertex[2*m] , o2_xy_translate[0] )
                                 o2.coovertex[2*m+1] = add( o2.coovertex[2*m+1] , o2_xy_translate[1] )
                             
+                                '''
                                 print("colp_o1: "+str(colp_o1))
                                 print("distlinecross_list: "+str(distlinecross_list))
                                 print("filtered: "+str(filtered))
@@ -2210,13 +2226,8 @@ def Collision_Polygon_FixedPolygon(pg1,pg2):
                                 print("normal: "+str([unitvec_n[2*shortest_dist_index],unitvec_n[2*shortest_dist_index+1],0]))
                                 print("tangent: "+str([unitvec_t[2*shortest_dist_index],unitvec_t[2*shortest_dist_index+1],0]))
                                 print("------------------------")
-                            #if pendist > 5:
-                            if 1==1:
-                                print(2)
-                                viz.append( canvas_1.create_line( [o2.coovertex[2*shortest_dist_index],o2.coovertex[2*shortest_dist_index+1],o2.coovertex[2*shortest_dist_index+2],o2.coovertex[2*shortest_dist_index+3]],fill="purple",width=5 ) )
-                                viz.append( canvas_1.create_line( [o2.coovertex[2*distlinecross_list.index(max(filtered))],o2.coovertex[2*distlinecross_list.index(max(filtered))+1],o2.coovertex[2*distlinecross_list.index(max(filtered))+2],o2.coovertex[2*distlinecross_list.index(max(filtered))+3]],fill="orange",width=5 ) )
-                                viz.append( canvas_1.create_oval(colpx-5,colpy-5,colpx+5,colpy+5,fill="purple",outline="black") )
-                                1==1
+                                '''
+                            
                             
                             
                     ###########################################################################################################################
