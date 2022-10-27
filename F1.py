@@ -51,6 +51,7 @@ colcounter = 0
 
 debug_col_lines = 0
 debug_polygon_to_polygon_cols = 1
+debug_contact_forces = 1
 
 t_elapsed = 0
 dt = 0.035 #0.002 0.015 0.05
@@ -764,7 +765,7 @@ def IntersectionPoint_Line_Line(l1,l2):
         else:
             k2 = (l2[3]-l2[1]) / (l2[2]-l2[0]) # already determined to not be zero or infinity
             m2 = l2[1]-k2*l2[0]
-            x_int = (m2-m1)/(k1-k2)
+            x_int = Safediv((m2-m1),(k1-k2))
             y_int = k1*x_int+m1
             iols = ( x_int>=min(l2[0],l2[2]) )*( x_int<=max(l2[0],l2[2]) )*( min(l1[1],l1[3])<=y_int )*( max(l1[1],l1[3])>=y_int )
             return [ x_int , y_int , iols ]
@@ -883,15 +884,15 @@ def Contact_line_line(o1,o2,coocol,unitvec_n,unitvec_t):
     o1.F_other =  subtract( o1.F_other , multiply([unitvec_t[0],unitvec_t[1]],F_t) )
     o2.F_other =  add( o2.F_other , multiply([unitvec_t[0],unitvec_t[1]],F_t) )
 
-
-    # Draw normal arrows
-    #viz.append( canvas_1.create_line(coocol[0]-unitvec_n[0]*viz_sf,coocol[1]-unitvec_n[1]*viz_sf,coocol[0]+unitvec_n[0]*viz_sf,coocol[1]+unitvec_n[1]*viz_sf,arrow=BOTH,fill="green") )
-    viz.append( canvas_1.create_line(coocol[0]-unitvec_n[0]*sf_farrow1*tanh(abs(F_n)/sf_farrow2),coocol[1]-unitvec_n[1]*sf_farrow1*tanh(abs(F_n)/sf_farrow2),coocol[0]+unitvec_n[0]*sf_farrow1*tanh(abs(F_n)/sf_farrow2),coocol[1]+unitvec_n[1]*sf_farrow1*tanh(abs(F_n)/sf_farrow2),arrow=BOTH,fill="red") )
-    # Draw tang arrows
-    #viz.append( canvas_1.create_line(coocol[0]-unitvec_t[0]*30,coocol[1]-unitvec_t[1]*30,coocol[0]+unitvec_t[0]*30,coocol[1]+unitvec_t[1]*30,arrow=BOTH,fill="green") )
-    viz.append( canvas_1.create_line(coocol[0]-unitvec_t[0]*sf_farrow1*tanh(abs(F_t)/sf_farrow2),coocol[1]-unitvec_t[1]*sf_farrow1*tanh(abs(F_t)/sf_farrow2),coocol[0]+unitvec_t[0]*sf_farrow1*tanh(abs(F_t)/sf_farrow2),coocol[1]+unitvec_t[1]*sf_farrow1*tanh(abs(F_t)/sf_farrow2),arrow=BOTH,fill="orange") )
-    # Draw contact point
-    viz.append( canvas_1.create_oval(coocol[0]-3,coocol[1]-3,coocol[0]+3,coocol[1]+3,fill="red",outline="red") )
+    if debug_contact_forces:
+        # Draw normal arrows
+        #viz.append( canvas_1.create_line(coocol[0]-unitvec_n[0]*viz_sf,coocol[1]-unitvec_n[1]*viz_sf,coocol[0]+unitvec_n[0]*viz_sf,coocol[1]+unitvec_n[1]*viz_sf,arrow=BOTH,fill="green") )
+        viz.append( canvas_1.create_line(coocol[0]-unitvec_n[0]*sf_farrow1*tanh(abs(F_n)/sf_farrow2),coocol[1]-unitvec_n[1]*sf_farrow1*tanh(abs(F_n)/sf_farrow2),coocol[0]+unitvec_n[0]*sf_farrow1*tanh(abs(F_n)/sf_farrow2),coocol[1]+unitvec_n[1]*sf_farrow1*tanh(abs(F_n)/sf_farrow2),arrow=BOTH,fill="red") )
+        # Draw tang arrows
+        #viz.append( canvas_1.create_line(coocol[0]-unitvec_t[0]*30,coocol[1]-unitvec_t[1]*30,coocol[0]+unitvec_t[0]*30,coocol[1]+unitvec_t[1]*30,arrow=BOTH,fill="green") )
+        viz.append( canvas_1.create_line(coocol[0]-unitvec_t[0]*sf_farrow1*tanh(abs(F_t)/sf_farrow2),coocol[1]-unitvec_t[1]*sf_farrow1*tanh(abs(F_t)/sf_farrow2),coocol[0]+unitvec_t[0]*sf_farrow1*tanh(abs(F_t)/sf_farrow2),coocol[1]+unitvec_t[1]*sf_farrow1*tanh(abs(F_t)/sf_farrow2),arrow=BOTH,fill="#F571D6") )
+        # Draw contact point
+        viz.append( canvas_1.create_oval(coocol[0]-3,coocol[1]-3,coocol[0]+3,coocol[1]+3,fill="red",outline="red") )
 
 def Contact_dyn_statline(o1,o2,coocol,unitvec_n,unitvec_t):
     rcol_o1 = [coocol[0]-o1.coo1[0],coocol[1]-o1.coo1[1],0]
@@ -921,16 +922,17 @@ def Contact_dyn_statline(o1,o2,coocol,unitvec_n,unitvec_t):
     o1.tau_other =  subtract( o1.tau_other , tauo1_n[2] )
     o1.tau_other =  subtract( o1.tau_other , tauo1_t[2] )
     
-    # Draw contact point
-    viz.append( canvas_1.create_oval(coocol[0]-3,coocol[1]-3,coocol[0]+3,coocol[1]+3,fill="red",outline="red") )
-    # Draw normal force arrow
-    #viz.append( canvas_1.create_line(coocol[0],coocol[1],coocol[0]+unitvec_n[0]*viz_sf,coocol[1]+unitvec_n[1]*viz_sf,arrow=LAST,fill="red") )
-    #viz.append( canvas_1.create_line(coocol[0],coocol[1],coocol[0]+unitvec_n[0]*abs(F_n)/viz_sf2,coocol[1]+unitvec_n[1]*abs(F_n)/viz_sf2,arrow=LAST,fill="red") )
-    viz.append( canvas_1.create_line(coocol[0],coocol[1],coocol[0]+unitvec_n[0]*sf_farrow1*tanh(abs(F_n)/sf_farrow2),coocol[1]+unitvec_n[1]*sf_farrow1*tanh(abs(F_n)/sf_farrow2),arrow=LAST,fill="red") )
-    # Draw normal force arrow
-    #viz.append( canvas_1.create_line(coocol[0],coocol[1],coocol[0]+F_t_unitvec[0]*viz_sf,coocol[1]+F_t_unitvec[1]*viz_sf,arrow=LAST,fill="red") )
-    #viz.append( canvas_1.create_line(coocol[0],coocol[1],coocol[0]+F_t_unitvec[0]*abs(F_t)/viz_sf2,coocol[1]+F_t_unitvec[1]*abs(F_t)/viz_sf2,arrow=LAST,fill="red") )
-    viz.append( canvas_1.create_line(coocol[0],coocol[1],coocol[0]+F_t_unitvec[0]*sf_farrow1*tanh(abs(F_t)/sf_farrow2),coocol[1]+F_t_unitvec[1]*sf_farrow1*tanh(abs(F_t)/sf_farrow2),arrow=LAST,fill="red") )
+    if debug_contact_forces:
+        # Draw contact point
+        viz.append( canvas_1.create_oval(coocol[0]-3,coocol[1]-3,coocol[0]+3,coocol[1]+3,fill="red",outline="red") )
+        # Draw normal force arrow
+        #viz.append( canvas_1.create_line(coocol[0],coocol[1],coocol[0]+unitvec_n[0]*viz_sf,coocol[1]+unitvec_n[1]*viz_sf,arrow=LAST,fill="red") )
+        #viz.append( canvas_1.create_line(coocol[0],coocol[1],coocol[0]+unitvec_n[0]*abs(F_n)/viz_sf2,coocol[1]+unitvec_n[1]*abs(F_n)/viz_sf2,arrow=LAST,fill="red") )
+        viz.append( canvas_1.create_line(coocol[0],coocol[1],coocol[0]+unitvec_n[0]*sf_farrow1*tanh(abs(F_n)/sf_farrow2),coocol[1]+unitvec_n[1]*sf_farrow1*tanh(abs(F_n)/sf_farrow2),arrow=LAST,fill="red") )
+        # Draw tangential force arrow
+        #viz.append( canvas_1.create_line(coocol[0],coocol[1],coocol[0]+F_t_unitvec[0]*viz_sf,coocol[1]+F_t_unitvec[1]*viz_sf,arrow=LAST,fill="red") )
+        #viz.append( canvas_1.create_line(coocol[0],coocol[1],coocol[0]+F_t_unitvec[0]*abs(F_t)/viz_sf2,coocol[1]+F_t_unitvec[1]*abs(F_t)/viz_sf2,arrow=LAST,fill="red") )
+        viz.append( canvas_1.create_line(coocol[0],coocol[1],coocol[0]+F_t_unitvec[0]*sf_farrow1*tanh(abs(F_t)/sf_farrow2),coocol[1]+F_t_unitvec[1]*sf_farrow1*tanh(abs(F_t)/sf_farrow2),arrow=LAST,fill="#F571D6") )
 
 def Contact_dyn_line(o1,o2,coocol,unitvec_n,unitvec_t):
     
@@ -975,14 +977,15 @@ def Contact_dyn_line(o1,o2,coocol,unitvec_n,unitvec_t):
     o1.F_other =  subtract( o1.F_other , multiply([unitvec_t[0],unitvec_t[1]],F_t) )
     o2.F_other =  add( o2.F_other , multiply([unitvec_t[0],unitvec_t[1]],F_t) )
     
-    # Draw contact point
-    viz.append( canvas_1.create_oval(coocol[0]-3,coocol[1]-3,coocol[0]+3,coocol[1]+3,fill="red",outline="red") )
-    # Draw force arrows
-    #viz.append( canvas_1.create_line(coocol[0]-unitvec_n[0]*viz_sf,coocol[1]-unitvec_n[1]*viz_sf,coocol[0]+unitvec_n[0]*viz_sf,coocol[1]+unitvec_n[1]*viz_sf,arrow=BOTH,fill="green") )
-    viz.append( canvas_1.create_line(coocol[0]-unitvec_n[0]*sf_farrow1*tanh(abs(F_n)/sf_farrow2),coocol[1]-unitvec_n[1]*sf_farrow1*tanh(abs(F_n)/sf_farrow2),coocol[0]+unitvec_n[0]*sf_farrow1*tanh(abs(F_n)/sf_farrow2),coocol[1]+unitvec_n[1]*sf_farrow1*tanh(abs(F_n)/sf_farrow2),arrow=BOTH,fill="red") )
-    # Draw tang vel arrows
-    #viz.append( canvas_1.create_line(coocol[0]-unitvec_t[0]*30,coocol[1]-unitvec_t[1]*30,coocol[0]+unitvec_t[0]*30,coocol[1]+unitvec_t[1]*30,arrow=BOTH,fill="green") )
-    viz.append( canvas_1.create_line(coocol[0]-unitvec_t[0]*sf_farrow1*tanh(abs(F_t)/sf_farrow2),coocol[1]-unitvec_t[1]*sf_farrow1*tanh(abs(F_t)/sf_farrow2),coocol[0]+unitvec_t[0]*sf_farrow1*tanh(abs(F_t)/sf_farrow2),coocol[1]+unitvec_t[1]*sf_farrow1*tanh(abs(F_t)/sf_farrow2),arrow=BOTH,fill="red") )
+    if debug_contact_forces:
+        # Draw contact point
+        viz.append( canvas_1.create_oval(coocol[0]-3,coocol[1]-3,coocol[0]+3,coocol[1]+3,fill="red",outline="red") )
+        # Draw force arrows
+        #viz.append( canvas_1.create_line(coocol[0]-unitvec_n[0]*viz_sf,coocol[1]-unitvec_n[1]*viz_sf,coocol[0]+unitvec_n[0]*viz_sf,coocol[1]+unitvec_n[1]*viz_sf,arrow=BOTH,fill="green") )
+        viz.append( canvas_1.create_line(coocol[0]-unitvec_n[0]*sf_farrow1*tanh(abs(F_n)/sf_farrow2),coocol[1]-unitvec_n[1]*sf_farrow1*tanh(abs(F_n)/sf_farrow2),coocol[0]+unitvec_n[0]*sf_farrow1*tanh(abs(F_n)/sf_farrow2),coocol[1]+unitvec_n[1]*sf_farrow1*tanh(abs(F_n)/sf_farrow2),arrow=BOTH,fill="red") )
+        # Draw tang vel arrows
+        #viz.append( canvas_1.create_line(coocol[0]-unitvec_t[0]*30,coocol[1]-unitvec_t[1]*30,coocol[0]+unitvec_t[0]*30,coocol[1]+unitvec_t[1]*30,arrow=BOTH,fill="green") )
+        viz.append( canvas_1.create_line(coocol[0]-unitvec_t[0]*sf_farrow1*tanh(abs(F_t)/sf_farrow2),coocol[1]-unitvec_t[1]*sf_farrow1*tanh(abs(F_t)/sf_farrow2),coocol[0]+unitvec_t[0]*sf_farrow1*tanh(abs(F_t)/sf_farrow2),coocol[1]+unitvec_t[1]*sf_farrow1*tanh(abs(F_t)/sf_farrow2),arrow=BOTH,fill="#F571D6") )
 
 def Collision_Ball_Ball(b1,b2):
     dist_b1b2 = sqrt( (b2.coo1[0]-b1.coo1[0])**2 + (b2.coo1[1]-b1.coo1[1])**2 ) # distance between points
@@ -1868,7 +1871,7 @@ def Collision_Polygon_Polygon(pg1,pg2):
                             if debug_polygon_to_polygon_cols:
                                 viz.append( canvas_1.create_line( [o2.coovertex[2*shortest_dist_index],o2.coovertex[2*shortest_dist_index+1],o2.coovertex[2*shortest_dist_index+2],o2.coovertex[2*shortest_dist_index+3]],fill="orange",width=5 ) )
                                 #viz.append( canvas_1.create_line( [o2.coovertex[2*distlinecross_list.index(max(filtered))],o2.coovertex[2*distlinecross_list.index(max(filtered))+1],o2.coovertex[2*distlinecross_list.index(max(filtered))+2],o2.coovertex[2*distlinecross_list.index(max(filtered))+3]],fill="orange",width=5 ) )
-                                #viz.append( canvas_1.create_oval(colpx-5,colpy-5,colpx+5,colpy+5,fill="purple") )
+                                viz.append( canvas_1.create_oval(colpx-5,colpy-5,colpx+5,colpy+5,fill="blue",outline="blue") )
                             
 
                             #Definition: Contact_line_line(o1,o2,coocol,unitvec_n,unitvec_t)
@@ -2057,7 +2060,7 @@ def Collision_Polygon_FixedPolygon(pg1,pg2):
                             if debug_polygon_to_polygon_cols:
                                 viz.append( canvas_1.create_line( [o2.coovertex[2*shortest_dist_index],o2.coovertex[2*shortest_dist_index+1],o2.coovertex[2*shortest_dist_index+2],o2.coovertex[2*shortest_dist_index+3]],fill="orange",width=5 ) )
                                 #viz.append( canvas_1.create_line( [o2.coovertex[2*distlinecross_list.index(max(filtered))],o2.coovertex[2*distlinecross_list.index(max(filtered))+1],o2.coovertex[2*distlinecross_list.index(max(filtered))+2],o2.coovertex[2*distlinecross_list.index(max(filtered))+3]],fill="orange",width=5 ) )
-                                #viz.append( canvas_1.create_oval(colpx-5,colpy-5,colpx+5,colpy+5,fill="purple") )
+                                viz.append( canvas_1.create_oval(colpx-5,colpy-5,colpx+5,colpy+5,fill="blue",outline="blue") )
                             
                             Contact_dyn_statline(o1,o2,[colpx,colpy,0],[unitvec_n[2*shortest_dist_index],unitvec_n[2*shortest_dist_index+1],0],[unitvec_t[2*shortest_dist_index],unitvec_t[2*shortest_dist_index+1],0]) #WORK HERE
                             #Contact_line_line(o1,o2,[colpx,colpy,0],[unitvec_n[2*shortest_dist_index],unitvec_n[2*shortest_dist_index+1],0],[unitvec_t[2*shortest_dist_index],unitvec_t[2*shortest_dist_index+1],0]) # WORK HERE
@@ -2193,7 +2196,7 @@ def Collision_Polygon_FixedPolygon(pg1,pg2):
                             if debug_polygon_to_polygon_cols:
                                 viz.append( canvas_1.create_line( [o2.coovertex[2*shortest_dist_index],o2.coovertex[2*shortest_dist_index+1],o2.coovertex[2*shortest_dist_index+2],o2.coovertex[2*shortest_dist_index+3]],fill="orange",width=5 ) )
                                 #viz.append( canvas_1.create_line( [o2.coovertex[2*distlinecross_list.index(max(filtered))],o2.coovertex[2*distlinecross_list.index(max(filtered))+1],o2.coovertex[2*distlinecross_list.index(max(filtered))+2],o2.coovertex[2*distlinecross_list.index(max(filtered))+3]],fill="orange",width=5 ) )
-                                #viz.append( canvas_1.create_oval(colpx-5,colpy-5,colpx+5,colpy+5,fill="purple") )
+                                viz.append( canvas_1.create_oval(colpx-5,colpy-5,colpx+5,colpy+5,fill="blue",outline="blue") )
                             
                             Contact_dyn_statline(o2,o1,[colpx,colpy,0],[unitvec_n[2*shortest_dist_index],unitvec_n[2*shortest_dist_index+1],0],[unitvec_t[2*shortest_dist_index],unitvec_t[2*shortest_dist_index+1],0]) #WORK HERE
                             #Contact_line_line(o1,o2,[colpx,colpy,0],[unitvec_n[2*shortest_dist_index],unitvec_n[2*shortest_dist_index+1],0],[unitvec_t[2*shortest_dist_index],unitvec_t[2*shortest_dist_index+1],0]) # WORK HERE
