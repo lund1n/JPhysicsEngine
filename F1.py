@@ -1869,9 +1869,12 @@ def Collision_Polygon_Polygon(pg1,pg2):
                             
 
                             if debug_polygon_to_polygon_cols:
-                                viz.append( canvas_1.create_line( [o2.coovertex[2*shortest_dist_index],o2.coovertex[2*shortest_dist_index+1],o2.coovertex[2*shortest_dist_index+2],o2.coovertex[2*shortest_dist_index+3]],fill="orange",width=5 ) )
-                                #viz.append( canvas_1.create_line( [o2.coovertex[2*distlinecross_list.index(max(filtered))],o2.coovertex[2*distlinecross_list.index(max(filtered))+1],o2.coovertex[2*distlinecross_list.index(max(filtered))+2],o2.coovertex[2*distlinecross_list.index(max(filtered))+3]],fill="orange",width=5 ) )
                                 viz.append( canvas_1.create_oval(colpx-5,colpy-5,colpx+5,colpy+5,fill="blue",outline="blue") )
+                                if shortest_dist_index == (lo2h-1):
+                                    viz.append( canvas_1.create_line( [o2.coovertex[2*shortest_dist_index],o2.coovertex[2*shortest_dist_index+1],o2.coovertex[0],o2.coovertex[1]],fill="orange",width=5 ) )
+                                else:
+                                    viz.append( canvas_1.create_line( [o2.coovertex[2*shortest_dist_index],o2.coovertex[2*shortest_dist_index+1],o2.coovertex[2*shortest_dist_index+2],o2.coovertex[2*shortest_dist_index+3]],fill="orange",width=5 ) )
+                                #viz.append( canvas_1.create_line( [o2.coovertex[2*distlinecross_list.index(max(filtered))],o2.coovertex[2*distlinecross_list.index(max(filtered))+1],o2.coovertex[2*distlinecross_list.index(max(filtered))+2],o2.coovertex[2*distlinecross_list.index(max(filtered))+3]],fill="orange",width=5 ) )
                             
 
                             #Definition: Contact_line_line(o1,o2,coocol,unitvec_n,unitvec_t)
@@ -2058,9 +2061,11 @@ def Collision_Polygon_FixedPolygon(pg1,pg2):
                             colpy = point[1]
 
                             if debug_polygon_to_polygon_cols:
-                                viz.append( canvas_1.create_line( [o2.coovertex[2*shortest_dist_index],o2.coovertex[2*shortest_dist_index+1],o2.coovertex[2*shortest_dist_index+2],o2.coovertex[2*shortest_dist_index+3]],fill="orange",width=5 ) )
-                                #viz.append( canvas_1.create_line( [o2.coovertex[2*distlinecross_list.index(max(filtered))],o2.coovertex[2*distlinecross_list.index(max(filtered))+1],o2.coovertex[2*distlinecross_list.index(max(filtered))+2],o2.coovertex[2*distlinecross_list.index(max(filtered))+3]],fill="orange",width=5 ) )
                                 viz.append( canvas_1.create_oval(colpx-5,colpy-5,colpx+5,colpy+5,fill="blue",outline="blue") )
+                                if shortest_dist_index == (lo2h-1):
+                                    viz.append( canvas_1.create_line( [o2.coovertex[2*shortest_dist_index],o2.coovertex[2*shortest_dist_index+1],o2.coovertex[0],o2.coovertex[1]],fill="orange",width=5 ) )
+                                else:
+                                    viz.append( canvas_1.create_line( [o2.coovertex[2*shortest_dist_index],o2.coovertex[2*shortest_dist_index+1],o2.coovertex[2*shortest_dist_index+2],o2.coovertex[2*shortest_dist_index+3]],fill="orange",width=5 ) )
                             
                             Contact_dyn_statline(o1,o2,[colpx,colpy,0],[unitvec_n[2*shortest_dist_index],unitvec_n[2*shortest_dist_index+1],0],[unitvec_t[2*shortest_dist_index],unitvec_t[2*shortest_dist_index+1],0]) #WORK HERE
                             #Contact_line_line(o1,o2,[colpx,colpy,0],[unitvec_n[2*shortest_dist_index],unitvec_n[2*shortest_dist_index+1],0],[unitvec_t[2*shortest_dist_index],unitvec_t[2*shortest_dist_index+1],0]) # WORK HERE
@@ -2194,9 +2199,11 @@ def Collision_Polygon_FixedPolygon(pg1,pg2):
                             colpy = point[1]
 
                             if debug_polygon_to_polygon_cols:
-                                viz.append( canvas_1.create_line( [o2.coovertex[2*shortest_dist_index],o2.coovertex[2*shortest_dist_index+1],o2.coovertex[2*shortest_dist_index+2],o2.coovertex[2*shortest_dist_index+3]],fill="orange",width=5 ) )
-                                #viz.append( canvas_1.create_line( [o2.coovertex[2*distlinecross_list.index(max(filtered))],o2.coovertex[2*distlinecross_list.index(max(filtered))+1],o2.coovertex[2*distlinecross_list.index(max(filtered))+2],o2.coovertex[2*distlinecross_list.index(max(filtered))+3]],fill="orange",width=5 ) )
                                 viz.append( canvas_1.create_oval(colpx-5,colpy-5,colpx+5,colpy+5,fill="blue",outline="blue") )
+                                if shortest_dist_index == (lo2h-1):
+                                    viz.append( canvas_1.create_line( [o2.coovertex[2*shortest_dist_index],o2.coovertex[2*shortest_dist_index+1],o2.coovertex[0],o2.coovertex[1]],fill="orange",width=5 ) )
+                                else:
+                                    viz.append( canvas_1.create_line( [o2.coovertex[2*shortest_dist_index],o2.coovertex[2*shortest_dist_index+1],o2.coovertex[2*shortest_dist_index+2],o2.coovertex[2*shortest_dist_index+3]],fill="orange",width=5 ) )
                             
                             Contact_dyn_statline(o2,o1,[colpx,colpy,0],[unitvec_n[2*shortest_dist_index],unitvec_n[2*shortest_dist_index+1],0],[unitvec_t[2*shortest_dist_index],unitvec_t[2*shortest_dist_index+1],0]) #WORK HERE
                             #Contact_line_line(o1,o2,[colpx,colpy,0],[unitvec_n[2*shortest_dist_index],unitvec_n[2*shortest_dist_index+1],0],[unitvec_t[2*shortest_dist_index],unitvec_t[2*shortest_dist_index+1],0]) # WORK HERE
@@ -3543,6 +3550,9 @@ obj.append(Object_Polygon(canvas_1,550,330,[-35,-10,35,-10,35,10,-35,10],40,rho_
 obj.append(Object_Polygon(canvas_1,240,400,[-45,-20,-35,-10,-25,-20,-15,-10,45,-20,45,20,5,59,-25,20,-65,5],40,rho_rubber,0.5,0.5,0.2,-0.3)) #42
 
 obj.append(Object_FixedPolygon(canvas_1,240,550,[-45,-20,-35,-10,-25,-20,-15,-10,45,-20,45,20,5,59,-25,20,-65,5],0.5,0.5)) #43
+
+obj.append(Object_FixedPolygon(canvas_1,0,0,[0,600,50, 670, 125,660,200,700,400,720,750,680,750,750,0,750],0.5,0.5)) #44
+
 
 x_m = 0
 y_m = 0
