@@ -54,7 +54,7 @@ debug_polygon_to_polygon_cols = 1
 debug_contact_forces = 1
 
 t_elapsed = 0
-dt = 0.035 #0.002 0.015 0.05
+dt = 0.05 #0.002 0.015 0.05
 
 dtr = canvas_1.create_text(10,20,text="dt = "+str(dt),font=("arial",8),anchor=SW)
 t_elapsedr = canvas_1.create_text(10,30,text="t = "+str(round(t_elapsed,9)),font=("arial",8),anchor=SW)
@@ -80,11 +80,7 @@ def Timestep():
     for i in range(0,len(viz)):
         canvas_1.delete(viz[0])
         viz.pop(0)
-    # Zero forces
-    for i in range(0,len(obj)):
-        obj[i].F_other = [0,0]
-        obj[i].tau_other = 0.0
-        obj[i].F_R = [0,0]
+    #"ZERO FORCES" USED TO BE HERE INSTEAD OF LAST IN THE TIMESTEP FUNCTION 
     # Update constraint forces
     for i in range(0,len(con)):
         con[i].update()
@@ -112,7 +108,11 @@ def Timestep():
     
     #print(obj[4].coo0[1]-obj[4].coom1[1])
     #print( sqrt( (obj[4].coo0[0]-obj[4].coom1[0])**2+(obj[4].coo0[1]-obj[4].coom1[1])**2 ) )
-
+    # Zero forces
+    for i in range(0,len(obj)):
+        obj[i].F_other = [0,0]
+        obj[i].tau_other = 0.0
+        obj[i].F_R = [0,0]
     # Loop
     win_1.after(5,Timestep)
 
@@ -169,6 +169,18 @@ def Vecproj_vec2(v,w):
 
 def Vecproj_vec3(v,w):
     return multiply( Safediv( v[0]*w[0] + v[1]*w[1] + v[2]*w[2] , (w[0]**2 + w[1]**2 + w[2]**2) ) , w )
+
+def apply_remote_force_at_point(object_physics, point_xy_global, value_force, vector_direction):
+
+    #apply force
+    object_physics.F_other =  add( object_physics.F_other , multiply([vector_direction[0],vector_direction[1]],value_force) )
+
+    #apply torque based on force application point
+    radius_com = [point_xy_global[0]-object_physics.coo1[0],point_xy_global[1]-object_physics.coo1[1],0]
+    tau = multiply(value_force,Crossprod_vec3(radius_com,vector_direction))
+    object_physics.tau_other =  add( object_physics.tau_other , tau[2] )
+
+    return
 
 ### ej längre nödvändig
 def ClosestPointOnLineSegment(px,py,line):
@@ -970,6 +982,11 @@ def Contact_dyn_line(o1,o2,coocol,unitvec_n,unitvec_t):
     tauo2_t = multiply(F_t,Crossprod_vec3(rcol_o2,unitvec_t))
     o1.tau_other =  subtract( o1.tau_other , tauo1_t[2] )
     o2.tau_other =  add( o2.tau_other , tauo2_t[2] )
+
+    ##### detta saknades så jag lade till det. ska det vara här? verkar vara rätt. jag har tyckt att boll-linje kollisionerna har varit "flytiga" innan.
+    tauo1_n = multiply(F_n,Crossprod_vec3(rcol_o1,unitvec_n))
+    o1.tau_other =  subtract( o1.tau_other , tauo1_n[2] )
+    #####
 
     tauo2_n = multiply(F_n,Crossprod_vec3(rcol_o2,unitvec_n))
     o2.tau_other =  add( o2.tau_other , tauo2_n[2] )
@@ -3553,6 +3570,7 @@ obj.append(Object_FixedPolygon(canvas_1,240,550,[-45,-20,-35,-10,-25,-20,-15,-10
 
 obj.append(Object_FixedPolygon(canvas_1,0,0,[0,600,50, 670, 125,660,200,700,400,720,750,680,750,750,0,750],0.5,0.5)) #44
 
+apply_remote_force_at_point(obj[40], [500, 400], 10000000000, [0,-1,0])
 
 x_m = 0
 y_m = 0
@@ -3579,7 +3597,7 @@ canvas_1.bind('<Motion>', motion)
 #   - Lägg till en "måttstock" längst ned på skärmen som skalas med skalningsnivån (tänk ANSYS)
 # Ha alla vertices for ett object i x- och y-listor, istället för som separata variabler. Bör ge snyggare kod och förenkla collision- och contact-funktionerna. En enda sådan funktion för alla fall?
 # Fixa luftmotståndspilarnas riktning som pekar mest 90 grader isär pga anv av tanh på F_D:s komposanter
-# Skapa allmän apply force-funktion som går att använda på vilken punkt som helst på vilket objekt som helst
+# KLAR Skapa allmän apply force-funktion som går att använda på vilken punkt som helst på vilket objekt som helst
 # Skapa mediemotstånd (luftmotstånd etc.) för rotation
 # Varför funkar den nya impulsekvationen i L2FL och inte den gamla?
 # Ha kraftpilar osv som ett separat objekt. Som Trace
