@@ -2677,6 +2677,93 @@ class Constraint_SpringDamper:
         else:
             if self.eps < -0.15:
                 canvas_1.itemconfigure(self.line,fill="blue",width=(1-self.eps)**6)
+
+class Constraint_SpringDamper_v2:
+    # v2 is designed to be able to attach to anywhere on a body. not just the center as v1.
+    def __init__(self,A,B,len0,k,damping,xPA,yPA,xPB,yPB):
+
+        self.A = A
+        self.B = B
+        self.len0 = len0
+
+        ### new section
+        self.cooPA_local_initial = [xPA - A.coo1[0], yPA - A.coo1[1]]
+        self.cooPB_local_initial = [xPB - B.coo1[0], yPB - B.coo1[1]]
+
+        self.radius_PA_com = [xPA-A.coo1[0],yPA-A.coo1[1],0]
+        self.radius_PB_com = [xPB-B.coo1[0],yPB-B.coo1[1],0]
+
+        self.theta_A_initial = A.theta1 # A angle. used for offsetting the attachment point of this constraint when A has an initial angle
+        
+        self.cooPAlocrot = self.cooPA_local_initial
+        self.cooPA = [xPA, yPA]
+
+        viz.append( canvas_1.create_oval(self.cooPA[0]-4,self.cooPA[1]-4,self.cooPA[0]+4,self.cooPA[1]+4,fill="red",outline="red") )
+        
+        #
+
+        self.theta_B_initial = B.theta1 # A angle. used for offsetting the attachment point of this constraint when A has an initial angle
+        
+        self.cooPBlocrot = self.cooPB_local_initial
+        self.cooPB = [xPB, yPB]
+
+        viz.append( canvas_1.create_oval(self.cooPB[0]-4,self.cooPB[1]-4,self.cooPB[0]+4,self.cooPB[1]+4,fill="blue",outline="blue") )
+        ###
+
+        self.AB = sqrt(   (self.A.coo1[0]-self.B.coo1[0])**2   +   (self.A.coo1[1]-self.B.coo1[1])**2   )
+        self.cosangle = (   (self.B.coo1[0]-self.A.coo1[0])/self.AB   )
+        self.sinangle = (   (self.B.coo1[1]-self.A.coo1[1])/self.AB   )
+
+        self.eps = (self.AB-self.len0)/self.len0
+
+        self.vrel = sqrt( (self.A.v0[0] - self.B.v0[0])**2 + (self.A.v0[1] - self.B.v0[1])**2 )
+        self.coodist = [abs(self.B.coo1[0] - self.A.coo1[0]), abs(self.B.coo1[1] - self.A.coo1[1])]
+        #self.line = canvas_1.create_line(self.A.coo1[0],self.A.coo1[1],self.B.coo1[0],self.B.coo1[1])
+        self.line = canvas_1.create_line(self.cooPA[0],self.cooPA[1],self.cooPB[0],self.cooPB[1])
+
+        self.damping = damping
+        self.F_damping = [self.damping*self.cosangle*self.vrel, self.damping*self.sinangle*self.vrel]        
+        
+        self.len = [self.cosangle*(self.AB-self.len0), self.sinangle*(self.AB-self.len0)]
+        self.k = k
+        self.update()
+
+    def update(self):
+        ### new section
+        self.cooPAlocrot = Rotxypairsinvec(self.cooPA_local_initial,self.A.theta1-self.theta_A_initial)
+        self.cooPA = add(self.cooPAlocrot, self.A.coo1)
+        self.cooPBlocrot = Rotxypairsinvec(self.cooPB_local_initial,self.B.theta1-self.theta_B_initial)
+        self.cooPB = add(self.cooPBlocrot, self.B.coo1)
+        viz.append( canvas_1.create_oval(self.cooPA[0]-4,self.cooPA[1]-4,self.cooPA[0]+4,self.cooPA[1]+4,fill="red",outline="red") )
+        viz.append( canvas_1.create_oval(self.cooPB[0]-4,self.cooPB[1]-4,self.cooPB[0]+4,self.cooPB[1]+4,fill="blue",outline="blue") )
+        ###
+
+        self.ABm1 = self.AB
+        self.AB = sqrt(   (self.A.coo1[0]-self.B.coo1[0])**2   +   (self.A.coo1[1]-self.B.coo1[1])**2   )
+        self.deltaAB = self.AB - self.ABm1
+        self.cosangle = (   (self.B.coo1[0]-self.A.coo1[0])/self.AB   )
+        self.sinangle = (   (self.B.coo1[1]-self.A.coo1[1])/self.AB   )
+
+        self.eps = (self.AB-self.len0)/self.len0
+
+        self.vrel = sqrt( (self.A.v0[0] - self.B.v0[0])**2 + (self.A.v0[1] - self.B.v0[1])**2 )
+        self.coodist = array([abs(self.B.coo1[0] - self.A.coo1[0]), abs(self.B.coo1[1] - self.A.coo1[1])])
+        self.len = array([self.cosangle*(self.AB-self.len0), self.sinangle*(self.AB-self.len0)])
+
+        self.F_damping = array([self.damping*self.cosangle*self.deltaAB/dt, self.damping*self.sinangle*self.deltaAB/dt])
+
+        self.A.F_other = add( self.A.F_other , array([(self.k*self.len[0] + self.F_damping[0]), (self.k*self.len[1] + self.F_damping[1])]) )
+        self.B.F_other = add( self.B.F_other , array([-(self.k*self.len[0] + self.F_damping[0]), -(self.k*self.len[1] + self.F_damping[1])]) )
+
+        # Draw
+        #canvas_1.coords(self.line,self.A.coo1[0],self.A.coo1[1],self.B.coo1[0],self.B.coo1[1])
+        canvas_1.coords(self.line,self.cooPA[0],self.cooPA[1],self.cooPB[0],self.cooPB[1])
+        canvas_1.itemconfigure(self.line,fill="black",width=2)
+        if self.eps > 0.15:
+            canvas_1.itemconfigure(self.line,fill="red")
+        else:
+            if self.eps < -0.15:
+                canvas_1.itemconfigure(self.line,fill="blue",width=(1-self.eps)**6)
             
 class Constraint_Distance:
     def __init__(self,A,B,len0):
@@ -3447,41 +3534,41 @@ class Object_ShowDistance_Point_LineSegment:
 
 Dp = DebugPoint(0,0)
 
-obj.append(Object_Ball(canvas_1,500,200,10,rho_rubber,0.5,0.6)) #spring cube ball 1
+obj.append(Object_Ball(canvas_1,500,200,10,rho_rubber,0.5,0.6)) #spring cube ball 0
 obj[0].v0[0] = 0.00
 obj[0].v0[1] = -0.0
 
-obj.append(Object_Ball(canvas_1,450,200,10,rho_rubber,0.5,0.6)) #spring cube ball 2
+obj.append(Object_Ball(canvas_1,450,200,10,rho_rubber,0.5,0.6)) #spring cube ball 1
 obj[1].v0[0] = 0.0
 obj[1].v0[1] = 0.0
 
-obj.append(Object_Ball(canvas_1,500,150,10,rho_rubber,0.5,0.6)) #spring cube ball 3
+obj.append(Object_Ball(canvas_1,500,150,10,rho_rubber,0.5,0.6)) #spring cube ball 2
 obj[2].v0[0] = 0.0
 obj[2].v0[1] = 0.0
 
-obj.append(Object_Ball(canvas_1,450,150,10,rho_rubber,0.5,0.6)) #spring cube ball 4
+obj.append(Object_Ball(canvas_1,450,150,10,rho_rubber,0.5,0.6)) #spring cube ball 3
 obj[3].v0[0] = 0.0
 obj[3].v0[1] = 0.0
 
-obj.append(Object_Ball(canvas_1,480,90,15,rho_rubber,0.5,0.6))
+obj.append(Object_Ball(canvas_1,480,90,15,rho_rubber,0.5,0.6)) #4
 obj[4].v0[0] = 3.0
 obj[4].v0[1] = 0.0
 
-obj.append(Object_Ball(canvas_1,130,50,15,rho_steel,0.5,0.6))
+obj.append(Object_Ball(canvas_1,130,50,15,rho_steel,0.5,0.6)) #5
 obj[5].v0[0] = 0.0
 obj[5].v0[1] = 0.0
 
-obj.append(Object_Ball(canvas_1,100,15,8,rho_rubber,0.5,0.6))
+obj.append(Object_Ball(canvas_1,100,15,8,rho_rubber,0.5,0.6)) #6
 obj[6].v0[0] = 0.0
 obj[6].v0[1] = 0.0
 
-obj.append(Object_Ball(canvas_1,120,55,10,rho_rubber,0.5,0.6))
+obj.append(Object_Ball(canvas_1,120,55,10,rho_rubber,0.5,0.6)) #7
 obj[7].v0[0] = 0.0
 obj[7].v0[1] = 0.0
 
-obj.append(Object_FixedPoint(canvas_1,200,230))
+obj.append(Object_FixedPoint(canvas_1,200,230)) #8
 
-obj.append(Object_Ball(canvas_1,140,70,12,rho_rubber,0.5,0.6))
+obj.append(Object_Ball(canvas_1,140,70,12,rho_rubber,0.5,0.6)) #9
 obj[9].v0[0] = 0.0
 obj[9].v0[1] = 0.0
 
@@ -3571,6 +3658,8 @@ obj.append(Object_FixedPolygon(canvas_1,240,550,[-45,-20,-35,-10,-25,-20,-15,-10
 obj.append(Object_FixedPolygon(canvas_1,0,0,[0,600,50, 670, 125,660,200,700,400,720,750,680,750,750,0,750],0.5,0.5)) #44
 
 apply_remote_force_at_point(obj[40], [500, 400], 10000000000, [0,-1,0])
+
+con.append(Constraint_SpringDamper_v2(obj[9],obj[0],200,100,100,80,70,500,100))
 
 x_m = 0
 y_m = 0
