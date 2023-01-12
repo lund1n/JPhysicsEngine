@@ -2641,7 +2641,7 @@ class Constraint_SpringDamper:
         self.eps = (self.AB-self.len0)/self.len0
 
         self.vrel = sqrt( (self.A.v0[0] - self.B.v0[0])**2 + (self.A.v0[1] - self.B.v0[1])**2 )
-        self.coodist = [abs(self.B.coo1[0] - self.A.coo1[0]), abs(self.B.coo1[1] - self.A.coo1[1])]
+        #self.coodist = [abs(self.B.coo1[0] - self.A.coo1[0]), abs(self.B.coo1[1] - self.A.coo1[1])]
         self.line = canvas_1.create_line(self.A.coo1[0],self.A.coo1[1],self.B.coo1[0],self.B.coo1[1])
 
         self.damping = damping
@@ -2661,7 +2661,7 @@ class Constraint_SpringDamper:
         self.eps = (self.AB-self.len0)/self.len0
 
         self.vrel = sqrt( (self.A.v0[0] - self.B.v0[0])**2 + (self.A.v0[1] - self.B.v0[1])**2 )
-        self.coodist = array([abs(self.B.coo1[0] - self.A.coo1[0]), abs(self.B.coo1[1] - self.A.coo1[1])])
+        #self.coodist = array([abs(self.B.coo1[0] - self.A.coo1[0]), abs(self.B.coo1[1] - self.A.coo1[1])])
         self.len = array([self.cosangle*(self.AB-self.len0), self.sinangle*(self.AB-self.len0)])
 
         self.F_damping = array([self.damping*self.cosangle*self.deltaAB/dt, self.damping*self.sinangle*self.deltaAB/dt])
@@ -2690,8 +2690,10 @@ class Constraint_SpringDamper_v2:
         self.cooPA_local_initial = [xPA - A.coo1[0], yPA - A.coo1[1]]
         self.cooPB_local_initial = [xPB - B.coo1[0], yPB - B.coo1[1]]
 
-        self.radius_PA_com = [xPA-A.coo1[0],yPA-A.coo1[1],0]
-        self.radius_PB_com = [xPB-B.coo1[0],yPB-B.coo1[1],0]
+        #self.radius_PA_com = [xPA-A.coo1[0],yPA-A.coo1[1],0]
+        #self.radius_PB_com = [xPB-B.coo1[0],yPB-B.coo1[1],0]
+        self.radius_PA_com = sqrt( (xPA-self.A.coo1[0])**2 + (yPA-self.A.coo1[1])**2 )
+        self.radius_PB_com = sqrt( (xPB-self.B.coo1[0])**2 + (yPB-self.B.coo1[1])**2 )
 
         self.theta_A_initial = A.theta1 # A angle. used for offsetting the attachment point of this constraint when A has an initial angle
         
@@ -2710,21 +2712,23 @@ class Constraint_SpringDamper_v2:
         viz.append( canvas_1.create_oval(self.cooPB[0]-4,self.cooPB[1]-4,self.cooPB[0]+4,self.cooPB[1]+4,fill="blue",outline="blue") )
         ###
 
-        self.AB = sqrt(   (self.A.coo1[0]-self.B.coo1[0])**2   +   (self.A.coo1[1]-self.B.coo1[1])**2   )
-        self.cosangle = (   (self.B.coo1[0]-self.A.coo1[0])/self.AB   )
-        self.sinangle = (   (self.B.coo1[1]-self.A.coo1[1])/self.AB   )
+        self.AB = sqrt(   (self.cooPA[0]-self.cooPB[0])**2   +   (self.cooPA[1]-self.cooPB[1])**2   )
+        self.cosangle = (   (self.cooPB[0]-self.cooPA[0])/self.AB   )
+        self.sinangle = (   (self.cooPB[1]-self.cooPA[1])/self.AB   )
+        self.vec3_normal = [self.cosangle, self.sinangle, 0]
 
         self.eps = (self.AB-self.len0)/self.len0
 
-        self.vrel = sqrt( (self.A.v0[0] - self.B.v0[0])**2 + (self.A.v0[1] - self.B.v0[1])**2 )
-        self.coodist = [abs(self.B.coo1[0] - self.A.coo1[0]), abs(self.B.coo1[1] - self.A.coo1[1])]
+        #self.vrel = sqrt( (self.A.v0[0] - self.B.v0[0])**2 + (self.A.v0[1] - self.B.v0[1])**2 )
+        #self.coodist = [abs(self.cooPB[0] - self.cooPA[0]), abs(self.cooPB[1] - self.cooPA[1])]
         #self.line = canvas_1.create_line(self.A.coo1[0],self.A.coo1[1],self.B.coo1[0],self.B.coo1[1])
         self.line = canvas_1.create_line(self.cooPA[0],self.cooPA[1],self.cooPB[0],self.cooPB[1])
 
         self.damping = damping
-        self.F_damping = [self.damping*self.cosangle*self.vrel, self.damping*self.sinangle*self.vrel]        
+        self.F_damping = 0
         
-        self.len = [self.cosangle*(self.AB-self.len0), self.sinangle*(self.AB-self.len0)]
+        #self.len = [self.cosangle*(self.AB-self.len0), self.sinangle*(self.AB-self.len0)]
+        self.len = self.AB-self.len0
         self.k = k
         self.update()
 
@@ -2734,26 +2738,39 @@ class Constraint_SpringDamper_v2:
         self.cooPA = add(self.cooPAlocrot, self.A.coo1)
         self.cooPBlocrot = Rotxypairsinvec(self.cooPB_local_initial,self.B.theta1-self.theta_B_initial)
         self.cooPB = add(self.cooPBlocrot, self.B.coo1)
-        viz.append( canvas_1.create_oval(self.cooPA[0]-4,self.cooPA[1]-4,self.cooPA[0]+4,self.cooPA[1]+4,fill="red",outline="red") )
-        viz.append( canvas_1.create_oval(self.cooPB[0]-4,self.cooPB[1]-4,self.cooPB[0]+4,self.cooPB[1]+4,fill="blue",outline="blue") )
+        #viz.append( canvas_1.create_oval(self.cooPA[0]-4,self.cooPA[1]-4,self.cooPA[0]+4,self.cooPA[1]+4,fill="red",outline="red") )
+        #viz.append( canvas_1.create_oval(self.cooPB[0]-4,self.cooPB[1]-4,self.cooPB[0]+4,self.cooPB[1]+4,fill="blue",outline="blue") )
         ###
 
         self.ABm1 = self.AB
-        self.AB = sqrt(   (self.A.coo1[0]-self.B.coo1[0])**2   +   (self.A.coo1[1]-self.B.coo1[1])**2   )
-        self.deltaAB = self.AB - self.ABm1
-        self.cosangle = (   (self.B.coo1[0]-self.A.coo1[0])/self.AB   )
-        self.sinangle = (   (self.B.coo1[1]-self.A.coo1[1])/self.AB   )
+        self.AB = sqrt(   (self.cooPA[0]-self.cooPB[0])**2   +   (self.cooPA[1]-self.cooPB[1])**2   )
+        self.dABdx = (self.AB - self.ABm1)/dt
+        self.cosangle = (   (self.cooPB[0]-self.cooPA[0])/self.AB   )
+        self.sinangle = (   (self.cooPB[1]-self.cooPA[1])/self.AB   )
+        self.vec3_normal = [self.cosangle, self.sinangle, 0]
 
         self.eps = (self.AB-self.len0)/self.len0
 
-        self.vrel = sqrt( (self.A.v0[0] - self.B.v0[0])**2 + (self.A.v0[1] - self.B.v0[1])**2 )
-        self.coodist = array([abs(self.B.coo1[0] - self.A.coo1[0]), abs(self.B.coo1[1] - self.A.coo1[1])])
-        self.len = array([self.cosangle*(self.AB-self.len0), self.sinangle*(self.AB-self.len0)])
+        #self.vrel = sqrt( (self.A.v0[0] - self.B.v0[0])**2 + (self.A.v0[1] - self.B.v0[1])**2 )
+        #self.coodist = array([abs(self.B.coo1[0] - self.A.coo1[0]), abs(self.B.coo1[1] - self.A.coo1[1])])
+        #self.len = array([self.cosangle*(self.AB-self.len0), self.sinangle*(self.AB-self.len0)])
+        self.len = self.AB-self.len0
 
-        self.F_damping = array([self.damping*self.cosangle*self.deltaAB/dt, self.damping*self.sinangle*self.deltaAB/dt])
+        self.F_spring = self.k*self.len
+        self.F_damping = self.damping*self.dABdx
 
-        self.A.F_other = add( self.A.F_other , array([(self.k*self.len[0] + self.F_damping[0]), (self.k*self.len[1] + self.F_damping[1])]) )
-        self.B.F_other = add( self.B.F_other , array([-(self.k*self.len[0] + self.F_damping[0]), -(self.k*self.len[1] + self.F_damping[1])]) )
+        #print(obj[9])
+        #print(self.A)
+
+        # Spring force
+        apply_remote_force_at_point(self.A, self.cooPA, self.F_spring, self.vec3_normal)
+        apply_remote_force_at_point(self.B, self.cooPB, self.F_spring, multiply(self.vec3_normal,-1))
+        # Dampener force
+        apply_remote_force_at_point(self.A, self.cooPA, self.F_damping, self.vec3_normal)
+        apply_remote_force_at_point(self.B, self.cooPB, self.F_damping, multiply(self.vec3_normal,-1))
+
+        #self.A.F_other = add( self.A.F_other , array([(self.k*self.len[0] + self.F_damping[0]), (self.k*self.len[1] + self.F_damping[1])]) )
+        #self.B.F_other = add( self.B.F_other , array([-(self.k*self.len[0] + self.F_damping[0]), -(self.k*self.len[1] + self.F_damping[1])]) )
 
         # Draw
         #canvas_1.coords(self.line,self.A.coo1[0],self.A.coo1[1],self.B.coo1[0],self.B.coo1[1])
@@ -2856,6 +2873,7 @@ class Object_Ball:
         self.vel = subtract(self.coo1,self.coo0)/dt
         self.absvel = sqrt( (self.vel[0])**2 + (self.vel[1])**2 )
         self.unitvec_vel = [Safediv(self.vel[0],self.absvel),Safediv(self.vel[1],self.absvel)]
+        self.omega = subtract(self.theta1,self.theta0)/dt
         self.A_ABfacingdirection = pi*self.r**2
 
         # Inertia
@@ -2928,6 +2946,7 @@ class Object_Ball:
         self.vel = subtract(self.coo1,self.coo0)/dt
         self.absvel = sqrt( (self.vel[0])**2 + (self.vel[1])**2 )
         self.unitvec_vel = [Safediv(self.vel[0],self.absvel),Safediv(self.vel[1],self.absvel)]
+        self.omega = subtract(self.theta1,self.theta0)/dt
         self.A_ABfacingdirection = pi*self.r**2
 
         # Drag force in the chosen medium (air, water, etc.)
@@ -3554,7 +3573,7 @@ obj.append(Object_Ball(canvas_1,480,90,15,rho_rubber,0.5,0.6)) #4
 obj[4].v0[0] = 3.0
 obj[4].v0[1] = 0.0
 
-obj.append(Object_Ball(canvas_1,130,50,15,rho_steel,0.5,0.6)) #5
+obj.append(Object_Ball(canvas_1,130,50,25,rho_steel,0.5,0.6)) #5
 obj[5].v0[0] = 0.0
 obj[5].v0[1] = 0.0
 
@@ -3568,7 +3587,7 @@ obj[7].v0[1] = 0.0
 
 obj.append(Object_FixedPoint(canvas_1,200,230)) #8
 
-obj.append(Object_Ball(canvas_1,140,70,12,rho_rubber,0.5,0.6)) #9
+obj.append(Object_Ball(canvas_1,140,70,10,rho_rubber,0.5,0.6)) #9
 obj[9].v0[0] = 0.0
 obj[9].v0[1] = 0.0
 
@@ -3595,7 +3614,8 @@ con.append(Constraint_SpringDamper(obj[1],obj[3],100,1000000,500000))
 #
 
 # 4 balls to 1 fixed point
-con.append(Constraint_SpringDamper(obj[5],obj[8],40,1000000,1000000))
+con.append(Constraint_Distance(obj[5],obj[8],80,))
+#con.append(Constraint_SpringDamper(obj[5],obj[8],40,1000000,1000000))
 con.append(Constraint_SpringDamper(obj[8],obj[6],25,1000000,1000000))
 con.append(Constraint_SpringDamper(obj[6],obj[7],125,1000000,1000000))
 con.append(Constraint_SpringDamper(obj[9],obj[6],125,1000000,1000000))
@@ -3659,7 +3679,7 @@ obj.append(Object_FixedPolygon(canvas_1,0,0,[0,600,50, 670, 125,660,200,700,400,
 
 apply_remote_force_at_point(obj[40], [500, 400], 10000000000, [0,-1,0])
 
-con.append(Constraint_SpringDamper_v2(obj[9],obj[0],200,100,100,80,70,500,100))
+con.append(Constraint_SpringDamper_v2(obj[5],obj[42],100,4000000,500,160,100,190,400))
 
 x_m = 0
 y_m = 0
@@ -3674,6 +3694,9 @@ canvas_1.bind('<Motion>', motion)
 #Testkommentar för githubcommit
 
 ## ATT GÖRA:
+# KLAR fix damping for both springdamperconstraint v1 and v2. they are coded wrong. they should only measure velocity in the line between points A and B
+# rewrite springdamperv1. its inefficient
+# polygon mot fixed polygon -kontakt visar normalpilar åt fel håll när den rörligas noder passerar den fastas. ej ett problem för friktionspilarna.
 # polygon och line går ibland genom varandra utan kontakt
 # polygon och ine fastnar ibland i varandra
 # gör om alla bounding boxes till fyrkanter istället för cirklar (sqrt är långsam)
